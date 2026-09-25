@@ -51,12 +51,17 @@ function registerHandlers(io) {
         socket.roomCode = room.code;
         socket.join(room.code);
 
+        const publicRoom = room.getPublicState();
+
         // Confirm to joining socket
         socket.emit('room-joined', {
-          roomCode:  room.code,
-          isPrivate: room.isPrivate,
+          roomCode:    room.code,
+          isPrivate:   room.isPrivate,
+          nickname:    player.nickname,
           player,
-          room:      room.getPublicState(),
+          players:     publicRoom.players,
+          totalRounds: publicRoom.totalRounds,
+          room:        publicRoom,
         });
 
         // Notify everyone else in the room
@@ -91,11 +96,16 @@ function registerHandlers(io) {
         socket.roomCode = room.code;
         socket.join(room.code);
 
+        const publicRoom = room.getPublicState();
+
         socket.emit('room-joined', {
-          roomCode:  room.code,
-          isPrivate: true,
+          roomCode:    room.code,
+          isPrivate:   true,
+          nickname:    player.nickname,
           player,
-          room:      room.getPublicState(),
+          players:     publicRoom.players,
+          totalRounds: publicRoom.totalRounds,
+          room:        publicRoom,
         });
 
         console.log(`[Room ${room.code}] Private room created by ${nick}.`);
@@ -140,11 +150,16 @@ function registerHandlers(io) {
         socket.roomCode = room.code;
         socket.join(room.code);
 
+        const publicRoom = room.getPublicState();
+
         socket.emit('room-joined', {
-          roomCode:  room.code,
-          isPrivate: true,
+          roomCode:    room.code,
+          isPrivate:   true,
+          nickname:    player.nickname,
           player,
-          room:      room.getPublicState(),
+          players:     publicRoom.players,
+          totalRounds: publicRoom.totalRounds,
+          room:        publicRoom,
         });
 
         socket.to(room.code).emit('player-joined', {

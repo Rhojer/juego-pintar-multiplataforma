@@ -49,15 +49,26 @@ class GameNotifier extends Notifier<GameState?> {
   // ─── Event Handlers ───
 
   void _onRoomJoined(Map<String, dynamic> data) {
-    final players = _parsePlayers(data['players']);
+    final roomMap = data['room'] is Map ? Map<String, dynamic>.from(data['room'] as Map) : null;
+    final rawPlayers = data['players'] ?? roomMap?['players'];
+    final players = _parsePlayers(rawPlayers);
+
+    final myPlayer = data['player'] is Map ? Map<String, dynamic>.from(data['player'] as Map) : null;
+    final nickname = data['nickname'] as String? ?? myPlayer?['nickname'] as String? ?? '';
+    final roomCode = data['roomCode'] as String? ?? roomMap?['code'] as String? ?? '';
+    final isPrivate = data['isPrivate'] as bool? ?? roomMap?['isPrivate'] as bool? ?? false;
+    final totalRounds = (data['totalRounds'] as num?)?.toInt() ??
+        (roomMap?['totalRounds'] as num?)?.toInt() ??
+        AppConstants.maxRounds;
+
     state = GameState.initial(
       myId: _socket.socketId,
-      myNickname: data['nickname'] as String? ?? '',
+      myNickname: nickname,
     ).copyWith(
-      roomCode: data['roomCode'] as String? ?? '',
-      isPrivate: data['isPrivate'] as bool? ?? false,
+      roomCode: roomCode,
+      isPrivate: isPrivate,
       players: players,
-      totalRounds: (data['totalRounds'] as num?)?.toInt() ?? AppConstants.maxRounds,
+      totalRounds: totalRounds,
     );
     // Notify chat
     ref.read(chatProvider.notifier).addSystem(VzlaMessages.playerJoined);
