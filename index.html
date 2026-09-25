@@ -1,46 +1,96 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <!--
-    If you are serving your web app in a path other than the root, change the
-    href value below to reflect the base path you are serving from.
-
-    The path provided below has to start and end with a slash "/" in order for
-    it to work correctly.
-
-    For more details:
-    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
-
-    This is a placeholder for base href that will be replaced by the value of
-    the `--base-href` argument provided to `flutter build`.
-  -->
   <base href="/juego-pintar-multiplataforma/">
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="A new Flutter project.">
+  <meta name="description" content="Rayando - Juego de dibujo venezolano multijugador en tiempo real">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="rayando">
-  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+  <meta name="apple-mobile-web-app-title" content="Rayando">
 
-  <!-- Favicon -->
+  <title>Rayando 🇻🇪 — Juego de Dibujo</title>
   <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <title>rayando</title>
-  <link rel="manifest" href="manifest.json">
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      padding: 0;
+      background: #1A1A2E;
+      color: #FFFFFF;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      overflow: hidden;
+      user-select: none;
+    }
+    #splash {
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      transition: opacity 0.4s ease-out;
+    }
+    .logo {
+      font-size: 48px;
+      font-weight: 900;
+      letter-spacing: -1px;
+      background: linear-gradient(135deg, #FF5722 0%, #FFD600 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin: 0;
+    }
+    .flag {
+      font-size: 34px;
+      line-height: 1;
+    }
+    .spinner {
+      width: 44px;
+      height: 44px;
+      border: 4px solid rgba(255, 255, 255, 0.1);
+      border-top: 4px solid #FFD600;
+      border-right: 4px solid #1E88E5;
+      border-bottom: 4px solid #F44336;
+      border-radius: 50%;
+      animation: spin 0.9s cubic-bezier(0.5, 0.1, 0.5, 0.9) infinite;
+      margin-top: 10px;
+    }
+    .loading-text {
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 15px;
+      font-weight: 600;
+      margin-top: 4px;
+    }
+    .tagline {
+      color: rgba(255, 255, 255, 0.35);
+      font-size: 12px;
+      margin-top: -4px;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
 </head>
 <body>
-  <!--
-    You can customize the "flutter_bootstrap.js" script.
-    This is useful to provide a custom configuration to the Flutter loader
-    or to give the user feedback during the initialization process.
+  <div id="splash">
+    <div class="logo">Rayando</div>
+    <div class="flag">🇻🇪</div>
+    <div class="spinner"></div>
+    <div class="loading-text">Cargando lienzo criollo...</div>
+    <div class="tagline">¡Paciencia pana, ya casi está listo!</div>
+  </div>
 
-    For more details:
-    * https://docs.flutter.dev/platform-integration/web/initialization
-  -->
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>
