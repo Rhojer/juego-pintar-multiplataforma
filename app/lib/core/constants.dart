@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 class AppConstants {
   AppConstants._();
 
-  /// VPS del servidor Rayando Venezuela
-  static const String serverUrl = 'http://162.35.173.35:3001';
+  /// VPS del servidor Rayando Venezuela (HTTPS / WSS seguro)
+  static const String serverUrl = 'https://koda-assist.duckdns.org';
 
   static const int maxPlayers = 8;
   static const int minPlayers = 2;
