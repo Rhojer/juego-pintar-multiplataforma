@@ -34,10 +34,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       CurvedAnimation(parent: _animCtrl, curve: Curves.easeInOut),
     );
 
-    // Listen for join errors
+    // Pre-connect socket so it's ready when user taps play or private room
     final socket = SocketService();
+    socket.connect();
+
+    // Listen for join errors
     socket.onJoinError.listen((msg) {
       if (mounted) {
+        _connectTimeoutTimer?.cancel();
         setState(() => _isConnecting = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -51,14 +55,33 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     // Navigate to lobby when room is joined
     socket.onRoomJoined.listen((_) {
       if (mounted) {
+        _connectTimeoutTimer?.cancel();
         setState(() => _isConnecting = false);
         context.go('/lobby');
       }
     });
   }
 
+  Timer? _connectTimeoutTimer;
+
+  void _startConnectingTimeout() {
+    _connectTimeoutTimer?.cancel();
+    _connectTimeoutTimer = Timer(const Duration(seconds: 10), () {
+      if (mounted && _isConnecting) {
+        setState(() => _isConnecting = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Tardó mucho en responder, intenta de nuevo pana.'),
+            backgroundColor: AppColors.warning,
+          ),
+        );
+      }
+    });
+  }
+
   @override
   void dispose() {
+    _connectTimeoutTimer?.cancel();
     _animCtrl.dispose();
     _nicknameCtrl.dispose();
     _roomCodeCtrl.dispose();
@@ -77,6 +100,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   void _joinPublic() {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     setState(() => _isConnecting = true);
+    _startConnectingTimeout();
     ref.read(gameProvider.notifier).joinPublic(_nicknameCtrl.text.trim());
   }
 
@@ -90,7 +114,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       ),
       builder: (ctx) => _PrivateRoomSheet(
         nickname: _nicknameCtrl.text.trim(),
-        onConnecting: () => setState(() => _isConnecting = true),
+        onConnecting: () {
+          setState(() => _isConnecting = true);
+          _startConnectingTimeout();
+        },
       ),
     );
   }

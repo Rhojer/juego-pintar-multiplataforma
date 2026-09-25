@@ -11,11 +11,12 @@ class SocketService {
 
   // ──────────────────────────── Socket ────────────────────────────
 
-  late IO.Socket _socket;
+  IO.Socket? _socket;
   bool _connected = false;
+  bool _listenersRegistered = false;
 
   bool get isConnected => _connected;
-  String get socketId => _socket.id ?? '';
+  String get socketId => _socket?.id ?? '';
 
   // ──────────────────────────── StreamControllers ────────────────────────────
 
@@ -56,106 +57,121 @@ class SocketService {
   // ──────────────────────────── Connect / Disconnect ────────────────────────────
 
   void connect() {
-    if (_connected) return;
+    if (_connected && _socket?.connected == true) return;
 
-    _socket = IO.io(
-      AppConstants.serverUrl,
-      IO.OptionBuilder()
-          .setTransports(['websocket'])
-          .disableAutoConnect()
-          .enableReconnection()
-          .setReconnectionAttempts(5)
-          .setReconnectionDelay(2000)
-          .build(),
-    );
+    if (_socket == null) {
+      _socket = IO.io(
+        AppConstants.serverUrl,
+        IO.OptionBuilder()
+            .setTransports(['websocket', 'polling'])
+            .enableAutoConnect()
+            .enableReconnection()
+            .setReconnectionAttempts(10)
+            .setReconnectionDelay(1000)
+            .build(),
+      );
+      _registerListeners();
+    } else if (_socket?.connected == false) {
+      _socket?.connect();
+    }
+  }
 
-    _socket.connect();
-    _registerListeners();
+  void _ensureConnected(void Function() action) {
+    connect();
+    if (_connected && _socket?.connected == true) {
+      action();
+    } else {
+      _socket?.once('connect', (_) {
+        action();
+      });
+    }
   }
 
   void disconnect() {
-    if (!_connected) return;
-    _socket.disconnect();
+    _socket?.disconnect();
     _connected = false;
   }
 
   void _registerListeners() {
-    _socket.onConnect((_) {
+    if (_listenersRegistered || _socket == null) return;
+    _listenersRegistered = true;
+
+    _socket!.onConnect((_) {
       _connected = true;
     });
 
-    _socket.onDisconnect((_) {
+    _socket!.onDisconnect((_) {
       _connected = false;
     });
 
-    _socket.onConnectError((data) {
+    _socket!.onConnectError((data) {
       _connected = false;
       _joinErrorCtrl.add(VzlaMessages.connectionError);
     });
 
     // ── Room events ──
-    _socket.on('room-joined', (data) {
+    _socket!.on('room-joined', (data) {
       _roomJoinedCtrl.add(_toMap(data));
     });
 
-    _socket.on('player-joined', (data) {
+    _socket!.on('player-joined', (data) {
       _playerJoinedCtrl.add(_toMap(data));
     });
 
-    _socket.on('player-left', (data) {
+    _socket!.on('player-left', (data) {
       _playerLeftCtrl.add(_toMap(data));
     });
 
-    _socket.on('player-ready', (data) {
+    _socket!.on('player-ready', (data) {
       _playerReadyCtrl.add(_toMap(data));
     });
 
-    _socket.on('join-error', (data) {
+    _socket!.on('join-error', (data) {
       final msg = data is Map ? data['message'] as String? : data.toString();
       _joinErrorCtrl.add(msg ?? '¡Error al unirse!');
     });
 
     // ── Game flow events ──
-    _socket.on('game-started', (data) {
+    _socket!.on('game-started', (data) {
       _gameStartedCtrl.add(_toMap(data));
     });
 
-    _socket.on('turn-started', (data) {
+    _socket!.on('turn-started', (data) {
       _turnStartedCtrl.add(_toMap(data));
     });
 
-    _socket.on('turn-ended', (data) {
+    _socket!.on('turn-ended', (data) {
       _turnEndedCtrl.add(_toMap(data));
     });
 
-    _socket.on('game-ended', (data) {
+    _socket!.on('game-ended', (data) {
       _gameEndedCtrl.add(_toMap(data));
     });
 
-    _socket.on('timer-tick', (data) {
+    _socket!.on('timer-tick', (data) {
       final seconds = data is int ? data : (data as Map)['seconds'] as int? ?? 0;
       _timerTickCtrl.add(seconds);
     });
 
     // ── Drawing events ──
-    _socket.on('drawing-data', (data) {
+    _socket!.on('drawing-data', (data) {
       _drawingDataCtrl.add(_toMap(data));
     });
 
-    _socket.on('canvas-cleared', (_) {
+    _socket!.on('canvas-cleared', (_) {
       _canvasClearedCtrl.add(null);
     });
 
     // ── Chat / guessing events ──
-    _socket.on('chat-message', (data) {
+    _socket!.on('chat-message', (data) {
       _chatMessageCtrl.add(_toMap(data));
     });
 
-    _socket.on('correct-guess', (data) {
+    _socket!.on('correct-guess', (data) {
       _correctGuessCtrl.add(_toMap(data));
     });
 
-    _socket.on('word-hint-update', (data) {
+    _socket!.on('word-hint-update', (data) {
       final hint = data is Map ? data['hint'] as String? : data.toString();
       _wordHintUpdateCtrl.add(hint ?? '');
     });
@@ -165,37 +181,43 @@ class SocketService {
 
   /// Join the public matchmaking queue
   void joinPublic(String nickname) {
-    _socket.emit('join-public', {'nickname': nickname});
+    _ensureConnected(() {
+      _socket?.emit('join-public', {'nickname': nickname});
+    });
   }
 
   /// Create a new private room
   void createPrivate(String nickname) {
-    _socket.emit('create-private', {'nickname': nickname});
+    _ensureConnected(() {
+      _socket?.emit('create-private', {'nickname': nickname});
+    });
   }
 
   /// Join an existing private room by code
   void joinPrivate(String nickname, String roomCode) {
-    _socket.emit('join-private', {'nickname': nickname, 'roomCode': roomCode.toUpperCase()});
+    _ensureConnected(() {
+      _socket?.emit('join-private', {'nickname': nickname, 'roomCode': roomCode.toUpperCase()});
+    });
   }
 
   /// Signal that the local player is ready to start
   void setReady() {
-    _socket.emit('set-ready');
+    _socket?.emit('set-ready');
   }
 
   /// Send an incremental batch of stroke points to the server
   void sendDrawingData(List<Map<String, dynamic>> strokes) {
-    _socket.emit('drawing-data', {'strokes': strokes});
+    _socket?.emit('drawing-data', {'strokes': strokes});
   }
 
   /// Tell all other clients to clear the canvas
   void clearCanvas() {
-    _socket.emit('clear-canvas');
+    _socket?.emit('clear-canvas');
   }
 
   /// Send a guess (or a chat message if not in drawing phase)
   void sendGuess(String text) {
-    _socket.emit('send-guess', {'text': text});
+    _socket?.emit('send-guess', {'text': text});
   }
 
   // ──────────────────────────── Helpers ────────────────────────────
