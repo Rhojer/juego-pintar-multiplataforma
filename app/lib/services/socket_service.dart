@@ -126,6 +126,10 @@ class SocketService {
       _playerReadyCtrl.add(_toMap(data));
     });
 
+    _socket!.on('player-ready-update', (data) {
+      _playerReadyCtrl.add(_toMap(data));
+    });
+
     _socket!.on('join-error', (data) {
       final msg = data is Map ? data['message'] as String? : data.toString();
       _joinErrorCtrl.add(msg ?? '¡Error al unirse!');
@@ -200,9 +204,12 @@ class SocketService {
     });
   }
 
-  /// Signal that the local player is ready to start
+  /// Signal that the local player is ready to start (toggles ready state)
   void setReady() {
-    _socket?.emit('set-ready');
+    _ensureConnected(() {
+      _socket?.emit('player-ready');
+      _socket?.emit('set-ready');
+    });
   }
 
   /// Send an incremental batch of stroke points to the server

@@ -97,10 +97,18 @@ class GameNotifier extends Notifier<GameState?> {
   }
 
   void _onPlayerReady(Map<String, dynamic> data) {
+    final current = state;
+    if (current == null) return;
+
+    if (data['players'] is List) {
+      final updatedPlayers = _parsePlayers(data['players']);
+      state = current.copyWith(players: updatedPlayers);
+      return;
+    }
+
     final id = data['playerId'] as String?;
     final isReady = data['isReady'] as bool? ?? true;
-    final current = state;
-    if (current == null || id == null) return;
+    if (id == null) return;
     final updated = current.players.map((p) {
       return p.id == id ? p.copyWith(isReady: isReady) : p;
     }).toList();
