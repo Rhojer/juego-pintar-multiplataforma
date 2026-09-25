@@ -175,10 +175,9 @@ function registerHandlers(io) {
     });
 
     // ==================================================================
-    // PLAYER READY
-    // Payload: {} (no data needed — socket identity is enough)
+    // PLAYER READY (supports toggle and both event names)
     // ==================================================================
-    socket.on('player-ready', () => {
+    function handleReadyToggle() {
       try {
         const room = getMyRoom();
         if (!room || room.status !== 'waiting') return;
@@ -186,25 +185,37 @@ function registerHandlers(io) {
         const player = room.players.get(socket.id);
         if (!player) return;
 
-        player.isReady = true;
+        // Toggle ready status
+        player.isReady = !player.isReady;
 
-        // Broadcast updated player list to room
-        io.to(room.code).emit('player-ready-update', {
-          players: room.getPublicState().players,
-        });
+        const publicRoom = room.getPublicState();
+        const payload = {
+          playerId: socket.id,
+          isReady:  player.isReady,
+          players:  publicRoom.players,
+        };
 
-        // Check if ALL players are ready (minimum 2)
-        const allPlayers  = [...room.players.values()];
-        const allReady    = allPlayers.length >= 2 && allPlayers.every((p) => p.isReady);
+        // Broadcast with both event names for maximum client compatibility
+        io.to(room.code).emit('player-ready', payload);
+        io.to(room.code).emit('player-ready-update', payload);
+
+        console.log(`[Room ${room.code}] ${player.nickname} ready: ${player.isReady}`);
+
+        // Check if ALL players are ready (minimum 2 players)
+        const allPlayers = [...room.players.values()];
+        const allReady   = allPlayers.length >= 2 && allPlayers.every((p) => p.isReady);
 
         if (allReady) {
-          console.log(`[Room ${room.code}] All players ready — starting game.`);
+          console.log(`[Room ${room.code}] All players ready (${allPlayers.length}) — starting game.`);
           room.startGame(io);
         }
       } catch (err) {
         console.error('[player-ready] Error:', err);
       }
-    });
+    }
+
+    socket.on('player-ready', handleReadyToggle);
+    socket.on('set-ready', handleReadyToggle);
 
     // ==================================================================
     // DRAWING DATA (stroke chunks from canvas)
