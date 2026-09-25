@@ -1,0 +1,27 @@
+name: rayando
+description: Rayando - Juego de dibujo venezolano ¡Chévere pana!
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_riverpod: ^2.4.0
+  riverpod_annotation: ^2.3.0
+  socket_io_client: ^2.0.3+1
+  go_router: ^12.0.0
+  google_fonts: ^6.1.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  build_runner: ^2.4.0
+  riverpod_generator: ^2.3.0
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/
