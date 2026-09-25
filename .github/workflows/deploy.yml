@@ -26,6 +26,7 @@ jobs:
         run: |
           flutter config --enable-web
           flutter create . --platforms web --project-name rayando
+          git checkout -- web/index.html || true
 
       - name: Install dependencies
         working-directory: app
@@ -33,7 +34,7 @@ jobs:
 
       - name: Build Flutter Web
         working-directory: app
-        run: flutter build web --release --base-href "/juego-pintar-multiplataforma/"
+        run: flutter build web --release --base-href "/juego-pintar-multiplataforma/" --pwa-strategy=none
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4

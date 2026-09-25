@@ -35,9 +35,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       CurvedAnimation(parent: _animCtrl, curve: Curves.easeInOut),
     );
 
-    // Pre-connect socket so it's ready when user taps play or private room
+    // Pre-connect socket after the first frame renders
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      SocketService().connect();
+    });
+
     final socket = SocketService();
-    socket.connect();
 
     // Listen for join errors
     socket.onJoinError.listen((msg) {
