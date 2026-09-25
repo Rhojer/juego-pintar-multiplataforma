@@ -9,6 +9,7 @@ import 'screens/game_screen.dart';
 import 'screens/results_screen.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
   runApp(const ProviderScope(child: RayandoApp()));
 }
 
