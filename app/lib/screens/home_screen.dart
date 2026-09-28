@@ -56,12 +56,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       }
     });
 
-    // Navigate to lobby when room is joined
-    socket.onRoomJoined.listen((_) {
+    // Navigate to lobby or game when room is joined
+    socket.onRoomJoined.listen((data) {
       if (mounted) {
         _connectTimeoutTimer?.cancel();
         setState(() => _isConnecting = false);
-        context.go('/lobby');
+        final roomMap = data['room'] is Map ? data['room'] as Map : null;
+        final status = (data['status'] ?? roomMap?['status']) as String?;
+        if (status == 'playing') {
+          context.go('/game');
+        } else {
+          context.go('/lobby');
+        }
       }
     });
   }

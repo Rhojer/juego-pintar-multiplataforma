@@ -58,12 +58,19 @@ class GameManager {
    * @returns {GameRoom}
    */
   getOrCreatePublicRoom() {
+    // 1. Prefer public rooms waiting in lobby
     for (const room of this.rooms.values()) {
-      if (!room.isPrivate && room.hasSpace()) {
+      if (!room.isPrivate && room.status === 'waiting' && room.hasSpace()) {
         return room;
       }
     }
-    // No suitable room found — spin up a new one
+    // 2. Otherwise join an active playing room if it has space
+    for (const room of this.rooms.values()) {
+      if (!room.isPrivate && room.status === 'playing' && room.hasSpace()) {
+        return room;
+      }
+    }
+    // 3. No suitable room found — spin up a new one
     return this.createRoom(false);
   }
 

@@ -35,6 +35,8 @@ class SocketService {
   final _joinErrorCtrl = StreamController<String>.broadcast();
   final _wordHintUpdateCtrl = StreamController<String>.broadcast();
   final _playerReadyCtrl = StreamController<Map<String, dynamic>>.broadcast();
+  final _chooseWordCtrl = StreamController<Map<String, dynamic>>.broadcast();
+  final _drawerChoosingCtrl = StreamController<Map<String, dynamic>>.broadcast();
 
   // ──────────────────────────── Public Streams ────────────────────────────
 
@@ -53,6 +55,8 @@ class SocketService {
   Stream<String> get onJoinError => _joinErrorCtrl.stream;
   Stream<String> get onWordHintUpdate => _wordHintUpdateCtrl.stream;
   Stream<Map<String, dynamic>> get onPlayerReady => _playerReadyCtrl.stream;
+  Stream<Map<String, dynamic>> get onWordChoices => _chooseWordCtrl.stream;
+  Stream<Map<String, dynamic>> get onDrawerChoosing => _drawerChoosingCtrl.stream;
 
   // ──────────────────────────── Connect / Disconnect ────────────────────────────
 
@@ -193,6 +197,14 @@ class SocketService {
       final hint = data is Map ? (data['wordHint'] ?? data['hint']) as String? : data.toString();
       _wordHintUpdateCtrl.add(hint ?? '');
     });
+
+    _socket!.on('choose-word', (data) {
+      _chooseWordCtrl.add(_toMap(data));
+    });
+
+    _socket!.on('drawer-choosing', (data) {
+      _drawerChoosingCtrl.add(_toMap(data));
+    });
   }
 
   // ──────────────────────────── Emit Methods ────────────────────────────
@@ -222,6 +234,13 @@ class SocketService {
   void setReady() {
     _ensureConnected(() {
       _socket?.emit('player-ready');
+    });
+  }
+
+  /// Drawer picks a word from the offered list
+  void chooseWord(String word) {
+    _ensureConnected(() {
+      _socket?.emit('word-chosen', {'word': word});
     });
   }
 
@@ -267,5 +286,7 @@ class SocketService {
     _joinErrorCtrl.close();
     _wordHintUpdateCtrl.close();
     _playerReadyCtrl.close();
+    _chooseWordCtrl.close();
+    _drawerChoosingCtrl.close();
   }
 }

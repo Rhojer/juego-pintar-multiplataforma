@@ -44,7 +44,7 @@ function registerHandlers(io) {
 
         const player = room.addPlayer(socket.id, nick);
         if (!player) {
-          socket.emit('join-error', { message: 'No se pudo unir: sala llena o en juego.' });
+          socket.emit('join-error', { message: 'No se pudo unir: sala llena.' });
           return;
         }
 
@@ -69,6 +69,42 @@ function registerHandlers(io) {
           player,
           players: room.getPublicState().players,
         });
+
+        // If game is already playing, provide current turn state snapshot immediately
+        if (room.status === 'playing') {
+          socket.emit('game-started', {
+            totalRounds:  room.totalRounds,
+            currentRound: room.currentRound,
+            players:      publicRoom.players,
+          });
+
+          if (room.isSelectingWord) {
+            socket.emit('drawer-choosing', {
+              drawerId:       room.currentDrawerId,
+              drawerNickname: room.players.get(room.currentDrawerId)?.nickname || 'Dibujante',
+              timeLimit:      10,
+              currentRound:   room.currentRound,
+              totalRounds:    room.totalRounds,
+              players:        publicRoom.players,
+            });
+          } else {
+            socket.emit('turn-started', {
+              drawerId:       room.currentDrawerId,
+              drawerNickname: room.players.get(room.currentDrawerId)?.nickname || 'Dibujante',
+              wordHint:       room.currentWordHint,
+              wordLength:     room.currentWord ? room.currentWord.length : 0,
+              roundTime:      room._getTimeLeft(),
+              currentRound:   room.currentRound,
+              totalRounds:    room.totalRounds,
+              word:           null,
+              players:        publicRoom.players,
+            });
+
+            if (room.currentStrokes && room.currentStrokes.length > 0) {
+              socket.emit('drawing-data', { strokes: room.currentStrokes });
+            }
+          }
+        }
 
         console.log(`[Room ${room.code}] ${nick} joined (${room.players.size} players).`);
       } catch (err) {
@@ -135,7 +171,7 @@ function registerHandlers(io) {
         }
 
         if (!room.hasSpace()) {
-          socket.emit('join-error', { message: 'La sala está llena o ya está en juego.' });
+          socket.emit('join-error', { message: 'La sala está llena.' });
           return;
         }
 
@@ -166,6 +202,42 @@ function registerHandlers(io) {
           player,
           players: room.getPublicState().players,
         });
+
+        // If game is already playing, provide current turn state snapshot immediately
+        if (room.status === 'playing') {
+          socket.emit('game-started', {
+            totalRounds:  room.totalRounds,
+            currentRound: room.currentRound,
+            players:      publicRoom.players,
+          });
+
+          if (room.isSelectingWord) {
+            socket.emit('drawer-choosing', {
+              drawerId:       room.currentDrawerId,
+              drawerNickname: room.players.get(room.currentDrawerId)?.nickname || 'Dibujante',
+              timeLimit:      10,
+              currentRound:   room.currentRound,
+              totalRounds:    room.totalRounds,
+              players:        publicRoom.players,
+            });
+          } else {
+            socket.emit('turn-started', {
+              drawerId:       room.currentDrawerId,
+              drawerNickname: room.players.get(room.currentDrawerId)?.nickname || 'Dibujante',
+              wordHint:       room.currentWordHint,
+              wordLength:     room.currentWord ? room.currentWord.length : 0,
+              roundTime:      room._getTimeLeft(),
+              currentRound:   room.currentRound,
+              totalRounds:    room.totalRounds,
+              word:           null,
+              players:        publicRoom.players,
+            });
+
+            if (room.currentStrokes && room.currentStrokes.length > 0) {
+              socket.emit('drawing-data', { strokes: room.currentStrokes });
+            }
+          }
+        }
 
         console.log(`[Room ${room.code}] ${nick} joined private room (${room.players.size} players).`);
       } catch (err) {
@@ -218,6 +290,20 @@ function registerHandlers(io) {
     socket.on('set-ready', handleReadyToggle);
 
     // ==================================================================
+    // WORD CHOSEN (Drawer picks one of the 3 offered words)
+    // Payload: { word: string }
+    // ==================================================================
+    socket.on('word-chosen', ({ word } = {}) => {
+      try {
+        const room = getMyRoom();
+        if (!room || room.status !== 'playing') return;
+        room.confirmWord(socket.id, word);
+      } catch (err) {
+        console.error('[word-chosen] Error:', err);
+      }
+    });
+
+    // ==================================================================
     // DRAWING DATA (stroke chunks from canvas)
     // Payload: { strokes: any }   (format defined by client — passed through)
     // ==================================================================
@@ -226,6 +312,9 @@ function registerHandlers(io) {
         const room = getMyRoom();
         if (!room || room.status !== 'playing') return;
         if (room.currentDrawerId !== socket.id) return; // only the drawer may send strokes
+
+        // Buffer strokes on room for any players joining mid-turn
+        room.addStrokes(strokes);
 
         // Relay to everyone else in the room (not back to sender)
         socket.to(room.code).emit('drawing-data', { strokes });
@@ -244,6 +333,7 @@ function registerHandlers(io) {
         if (!room || room.status !== 'playing') return;
         if (room.currentDrawerId !== socket.id) return;
 
+        room.clearStrokes();
         socket.to(room.code).emit('canvas-cleared');
       } catch (err) {
         console.error('[clear-canvas] Error:', err);

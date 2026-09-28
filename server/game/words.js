@@ -1,75 +1,114 @@
 /**
  * words.js
- * Venezuelan-themed word bank for Rayando.
- * Words are organized by category so future features (category voting) are easy to add.
+ * Banco de palabras de Rayando:
+ * - Todas son de UNA SOLA PALABRA (sin espacios ni frases compuestas).
+ * - Fáciles de dibujar y adivinar.
+ * - Incluye sustantivos cotidianos, animales, comida, naturaleza,
+ *   acciones (verbos dibujables) y términos venezolanos populares.
  */
 
 const wordBank = {
+  // Verbos y acciones fáciles de representar con dibujos
+  acciones: [
+    'bailar', 'correr', 'dormir', 'llorar', 'cantar',
+    'nadar', 'cocinar', 'saltar', 'comer', 'pintar',
+    'reir', 'barrer', 'peinar', 'manejar', 'escribir',
+    'volar', 'pescar', 'boxear', 'limpiar', 'patinar',
+    'gritar', 'besar', 'abrazar', 'cortar', 'lavar',
+  ],
+
+  // Comida, frutas y platos venezolanos/latinos
   comida: [
-    'arepa', 'hallaca', 'cachapa', 'tequeño', 'pabellón criollo',
-    'caraotas', 'tajadas', 'papelón', 'guarapo', 'chicha',
-    'mandoca', 'empanada', 'pasticho', 'pepito', 'perro caliente',
-    'hervido', 'sancocho', 'tostones', 'asado negro', 'bienmesabe',
-    'quesillo', 'golfeado', 'pan de jamón', 'polvorosa', 'besitos de coco',
-    'majarete', 'cazuela marinera', 'crema de auyama', 'morcilla', 'chorizos',
+    'arepa', 'empanada', 'cachapa', 'tequeño', 'hallaca',
+    'mango', 'cambur', 'piña', 'manzana', 'fresa',
+    'naranja', 'limon', 'sandia', 'aguacate', 'platano',
+    'pizza', 'hamburguesa', 'huevo', 'queso', 'pan',
+    'torta', 'helado', 'galleta', 'sopa', 'tajadas',
+    'chocolate', 'chicha', 'papelon', 'guarapo', 'mandoca',
   ],
 
-  jerga: [
-    'chévere', 'pana', 'vaina', 'arrecho', 'chamo',
-    'chamito', 'corotos', 'broma', 'chiva', 'gandola',
-    'musiú', 'catire', 'pargo', 'mamar gallo', 'echar paja',
-    'sifrino', 'chiroso', 'perolero', 'arrechera', 'pichirre',
-    'bululú', 'chévere', 'leche', 'ladilla', 'vergación',
-    'a la orden', 'eso sí está', 'me cae gordo', 'está pelabola', 'qué molleja',
-  ],
-
-  lugares: [
-    'Caracas', 'Maracaibo', 'Valencia', 'Barquisimeto', 'Maturín',
-    'Margarita', 'Los Roques', 'El Ávila', 'Morrocoy', 'Canaima',
-    'Mérida', 'Cumaná', 'Ciudad Bolívar', 'Puerto Ordaz', 'Maracay',
-    'Paraguana', 'Salto Ángel', 'Orinoco', 'Río Negro', 'Llanos',
-  ],
-
+  // Animales comunes y autóctonos
   animales: [
-    'turpial', 'tonina', 'baquiro', 'chigüire', 'cunaguaro',
-    'flamenco', 'guacamaya', 'morrocoy', 'caiman', 'anaconda',
-    'perro de agua', 'corocoro', 'lapa', 'danta', 'oso palmero',
-    'perico', 'garza', 'cachicamo', 'manatí', 'nutria',
+    'perro', 'gato', 'caballo', 'elefante', 'mono',
+    'tortuga', 'loro', 'pato', 'pez', 'tiburon',
+    'ballena', 'raton', 'leon', 'tigre', 'vaca',
+    'cerdo', 'oveja', 'conejo', 'araña', 'serpiente',
+    'mariposa', 'abeja', 'rana', 'pinguino', 'cangrejo',
+    'jirafa', 'pulpo', 'buho', 'aguila', 'turpial',
+    'chigüire', 'morrocoy', 'cunaguaro', 'tonina', 'caiman',
   ],
 
-  cultura: [
-    'joropo', 'cuatro', 'arpa', 'maracas', 'tambor',
-    'gaita', 'Miss Venezuela', 'béisbol', 'pelota', 'papelón con limón',
-    'carnaval', 'Simón Bolívar', 'bandola', 'joropo llanero', 'velorio',
-    'parranda', 'diablos danzantes', 'Semana Santa', 'feria de la Chinita', 'retreta',
-  ],
-
+  // Objetos y herramientas cotidianas
   objetos: [
-    'budare', 'corotos', 'hamaca', 'chinchorro', 'totuma',
-    'pilón', 'metate', 'sebucán', 'tinaja', 'catumare',
-    'cesta', 'guayuco', 'mapire', 'alpargatas', 'sombrero llanero',
+    'martillo', 'tijera', 'lapiz', 'zapato', 'mesa',
+    'silla', 'cama', 'carro', 'avion', 'barco',
+    'reloj', 'telefono', 'guitarra', 'libro', 'vaso',
+    'llave', 'paraguas', 'sombrero', 'lentes', 'espejo',
+    'tenedor', 'cuchillo', 'cuchara', 'plato', 'cepillo',
+    'vela', 'candado', 'maleta', 'pelota', 'bicicleta',
+    'cohete', 'puente', 'bombillo', 'budare', 'cuatro',
+    'maracas', 'tambor', 'hamaca', 'alpargata', 'gandola',
   ],
 
+  // Naturaleza, clima y lugares
   naturaleza: [
-    'tepuy', 'sabana', 'selva', 'manglares', 'delta',
-    'cerro', 'laguna', 'río', 'fila', 'cueva',
-    'playa', 'arrecife', 'médano', 'morichal', 'caño',
-  ],
-
-  deportes: [
-    'béisbol', 'softbol', 'boxeo', 'ciclismo', 'natación',
-    'voleibol', 'baloncesto', 'fútbol', 'taekwondo', 'levantamiento de pesas',
+    'playa', 'sol', 'luna', 'estrella', 'nube',
+    'lluvia', 'fuego', 'volcan', 'montaña', 'rio',
+    'arbol', 'flor', 'isla', 'desierto', 'cueva',
+    'arcoiris', 'casa', 'castillo', 'hospital', 'iglesia',
+    'cerro', 'selva', 'laguna', 'viento', 'rayo',
   ],
 };
 
 /**
- * Returns a flat array of all words across every category,
- * with duplicates removed (some words appear in multiple categories intentionally).
+ * Devuelve todas las palabras únicas del banco asegurando que no haya espacios.
  * @returns {string[]}
  */
 function getAllWords() {
   const allWords = Object.values(wordBank).flat();
-  return [...new Set(allWords)];
+  // Filtro estricto: sin espacios y en minúsculas
+  return [...new Set(allWords)].map(w => w.trim().toLowerCase()).filter(w => !w.includes(' '));
 }
 
-module.exports = { wordBank, getAllWords };
+const ALL_WORDS = getAllWords();
+
+/**
+ * Selecciona una palabra aleatoria.
+ * @returns {string}
+ */
+function pickRandomWord() {
+  const index = Math.floor(Math.random() * ALL_WORDS.length);
+  return ALL_WORDS[index];
+}
+
+/**
+ * Selecciona 3 palabras aleatorias distintas para que el dibujante elija.
+ * @returns {string[]}
+ */
+function pickThreeWords() {
+  const selected = new Set();
+  const maxAttempts = 30;
+  let attempts = 0;
+
+  while (selected.size < 3 && attempts < maxAttempts) {
+    attempts++;
+    const w = ALL_WORDS[Math.floor(Math.random() * ALL_WORDS.length)];
+    selected.add(w);
+  }
+
+  // Si por alguna razón no llena 3, rellenar con palabras seguras
+  const fallbackList = ['arepa', 'perro', 'casa', 'bailar', 'sol'];
+  for (const fb of fallbackList) {
+    if (selected.size >= 3) break;
+    selected.add(fb);
+  }
+
+  return [...selected].slice(0, 3);
+}
+
+module.exports = {
+  wordBank,
+  getAllWords,
+  pickRandomWord,
+  pickThreeWords,
+};
