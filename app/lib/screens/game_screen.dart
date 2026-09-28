@@ -593,57 +593,72 @@ class DrawingCanvas extends ConsumerWidget {
   const DrawingCanvas({super.key, required this.isDrawing});
   final bool isDrawing;
 
+  static const double virtualWidth = 800.0;
+  static const double virtualHeight = 600.0;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final drawState = ref.watch(drawingProvider);
 
-    return Container(
-      margin: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.4),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: isDrawing
-            ? GestureDetector(
-                onPanStart: (details) {
-                  ref.read(drawingProvider.notifier).startStroke(
-                        details.localPosition.dx,
-                        details.localPosition.dy,
-                      );
-                },
-                onPanUpdate: (details) {
-                  ref.read(drawingProvider.notifier).addPoint(
-                        details.localPosition.dx,
-                        details.localPosition.dy,
-                      );
-                },
-                onPanEnd: (_) {
-                  ref.read(drawingProvider.notifier).endStroke();
-                },
-                child: CustomPaint(
-                  painter: _CanvasPainter(
-                    strokes: drawState.strokes,
-                    activeStroke: drawState.activeStroke,
-                  ),
-                  child: const SizedBox.expand(),
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: AspectRatio(
+          aspectRatio: 4 / 3,
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.4),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
                 ),
-              )
-            : CustomPaint(
-                painter: _CanvasPainter(
-                  strokes: drawState.strokes,
-                  activeStroke: drawState.activeStroke,
-                ),
-                child: const SizedBox.expand(),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final canvasW = constraints.maxWidth;
+                  final canvasH = constraints.maxHeight;
+
+                  Widget canvasWidget = CustomPaint(
+                    painter: _CanvasPainter(
+                      strokes: drawState.strokes,
+                      activeStroke: drawState.activeStroke,
+                    ),
+                    child: const SizedBox.expand(),
+                  );
+
+                  if (isDrawing) {
+                    canvasWidget = GestureDetector(
+                      onPanStart: (details) {
+                        if (canvasW <= 0 || canvasH <= 0) return;
+                        final vx = (details.localPosition.dx * (virtualWidth / canvasW)).clamp(0.0, virtualWidth);
+                        final vy = (details.localPosition.dy * (virtualHeight / canvasH)).clamp(0.0, virtualHeight);
+                        ref.read(drawingProvider.notifier).startStroke(vx, vy);
+                      },
+                      onPanUpdate: (details) {
+                        if (canvasW <= 0 || canvasH <= 0) return;
+                        final vx = (details.localPosition.dx * (virtualWidth / canvasW)).clamp(0.0, virtualWidth);
+                        final vy = (details.localPosition.dy * (virtualHeight / canvasH)).clamp(0.0, virtualHeight);
+                        ref.read(drawingProvider.notifier).addPoint(vx, vy);
+                      },
+                      onPanEnd: (_) {
+                        ref.read(drawingProvider.notifier).endStroke();
+                      },
+                      child: canvasWidget,
+                    );
+                  }
+
+                  return canvasWidget;
+                },
               ),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -655,10 +670,18 @@ class _CanvasPainter extends CustomPainter {
   final List<Map<String, dynamic>> strokes;
   final Map<String, dynamic>? activeStroke;
 
+  static const double virtualWidth = 800.0;
+  static const double virtualHeight = 600.0;
+
   @override
   void paint(Canvas canvas, Size size) {
+    if (size.width <= 0 || size.height <= 0) return;
+
+    canvas.save();
+    canvas.scale(size.width / virtualWidth, size.height / virtualHeight);
+
     canvas.drawRect(
-      Rect.fromLTWH(0, 0, size.width, size.height),
+      const Rect.fromLTWH(0, 0, virtualWidth, virtualHeight),
       Paint()..color = Colors.white,
     );
     for (final stroke in strokes) {
@@ -667,6 +690,7 @@ class _CanvasPainter extends CustomPainter {
     if (activeStroke != null) {
       _paintStroke(canvas, activeStroke!);
     }
+    canvas.restore();
   }
 
   void _paintStroke(Canvas canvas, Map<String, dynamic> stroke) {
@@ -742,7 +766,7 @@ class DrawingToolbar extends ConsumerStatefulWidget {
 class _DrawingToolbarState extends ConsumerState<DrawingToolbar> {
   int _selectedColorIndex = 0;
   int _selectedSizeIndex = 1; // 0=thin, 1=medium, 2=thick
-  static const _sizes = [3.0, 6.0, 14.0];
+  static const _sizes = [4.0, 8.0, 16.0];
   static const _sizeIcons = [Icons.remove, Icons.horizontal_rule, Icons.rectangle];
 
   @override
@@ -774,6 +798,7 @@ class _DrawingToolbarState extends ConsumerState<DrawingToolbar> {
                       '#${color.value.toRadixString(16).substring(2).toUpperCase()}',
                     );
                     notifier.setEraser(false);
+                    notifier.setStrokeWidth(_sizes[_selectedSizeIndex]);
                   },
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 150),
@@ -828,7 +853,7 @@ class _DrawingToolbarState extends ConsumerState<DrawingToolbar> {
               GestureDetector(
                 onTap: () {
                   notifier.setEraser(true);
-                  notifier.setStrokeWidth(18);
+                  notifier.setStrokeWidth(24.0);
                 },
                 child: Consumer(builder: (_, ref2, __) {
                   final erasing = ref2.watch(drawingProvider.notifier).isEraser;
