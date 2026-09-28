@@ -8,6 +8,7 @@ class VzlaAvatar {
     required this.emoji,
     required this.color,
     required this.subtitle,
+    required this.assetPath,
   });
 
   final String id;
@@ -15,6 +16,7 @@ class VzlaAvatar {
   final String emoji;
   final Color color;
   final String subtitle;
+  final String assetPath;
 }
 
 class VzlaAvatars {
@@ -25,6 +27,7 @@ class VzlaAvatars {
       emoji: '🫓',
       color: Color(0xFFFFB300),
       subtitle: 'La reina del desayuno',
+      assetPath: 'assets/avatars/arepa.jpg',
     ),
     VzlaAvatar(
       id: 'harina_pan',
@@ -32,34 +35,7 @@ class VzlaAvatars {
       emoji: '🌽',
       color: Color(0xFFFFD600),
       subtitle: 'El paquete amarillo',
-    ),
-    VzlaAvatar(
-      id: 'malta',
-      name: 'Malta',
-      emoji: '🥤',
-      color: Color(0xFF5D4037),
-      subtitle: 'Bien fría con leche',
-    ),
-    VzlaAvatar(
-      id: 'baseball',
-      name: 'Béisbol',
-      emoji: '⚾',
-      color: Color(0xFFD32F2F),
-      subtitle: '¡Pelotero de corazón!',
-    ),
-    VzlaAvatar(
-      id: 'chivo',
-      name: 'Chivo',
-      emoji: '🐐',
-      color: Color(0xFF8D6E63),
-      subtitle: 'Chivo en coco maracucho',
-    ),
-    VzlaAvatar(
-      id: 'desierto',
-      name: 'Médanos',
-      emoji: '🏜️',
-      color: Color(0xFFFB8C00),
-      subtitle: 'Médanos de Coro',
+      assetPath: 'assets/avatars/harina_pan.jpg',
     ),
     VzlaAvatar(
       id: 'tequeno',
@@ -67,13 +43,7 @@ class VzlaAvatars {
       emoji: '🧀',
       color: Color(0xFFFBC02D),
       subtitle: 'No hay fiesta sin él',
-    ),
-    VzlaAvatar(
-      id: 'iguana',
-      name: 'Iguana',
-      emoji: '🦎',
-      color: Color(0xFF43A047),
-      subtitle: 'Caimán de árbol',
+      assetPath: 'assets/avatars/tequeno.jpg',
     ),
     VzlaAvatar(
       id: 'mototaxi',
@@ -81,6 +51,39 @@ class VzlaAvatars {
       emoji: '🛵',
       color: Color(0xFF0288D1),
       subtitle: '¡Por la orillita, pana!',
+      assetPath: 'assets/avatars/mototaxi.jpg',
+    ),
+    VzlaAvatar(
+      id: 'malta',
+      name: 'Malta',
+      emoji: '🥤',
+      color: Color(0xFF5D4037),
+      subtitle: 'Bien fría con leche',
+      assetPath: 'assets/avatars/malta.jpg',
+    ),
+    VzlaAvatar(
+      id: 'chivo',
+      name: 'Chivo',
+      emoji: '🐐',
+      color: Color(0xFF8D6E63),
+      subtitle: 'Chivo en coco maracucho',
+      assetPath: 'assets/avatars/chivo.jpg',
+    ),
+    VzlaAvatar(
+      id: 'baseball',
+      name: 'Béisbol',
+      emoji: '⚾',
+      color: Color(0xFFD32F2F),
+      subtitle: '¡Pelotero de corazón!',
+      assetPath: 'assets/avatars/baseball.jpg',
+    ),
+    VzlaAvatar(
+      id: 'iguana',
+      name: 'Iguana',
+      emoji: '🦎',
+      color: Color(0xFF43A047),
+      subtitle: 'Caimán de árbol',
+      assetPath: 'assets/avatars/iguana.jpg',
     ),
     VzlaAvatar(
       id: 'guacamaya',
@@ -88,6 +91,15 @@ class VzlaAvatars {
       emoji: '🦜',
       color: Color(0xFFE91E63),
       subtitle: 'Colores del cielo caraqueño',
+      assetPath: 'assets/avatars/guacamaya.jpg',
+    ),
+    VzlaAvatar(
+      id: 'desierto',
+      name: 'Médanos',
+      emoji: '🏜️',
+      color: Color(0xFFFB8C00),
+      subtitle: 'Médanos de Coro',
+      assetPath: 'assets/avatars/desierto.jpg',
     ),
   ];
 
