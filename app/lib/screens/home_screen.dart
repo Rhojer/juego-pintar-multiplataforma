@@ -351,7 +351,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(currentAvatar.emoji, style: const TextStyle(fontSize: 16)),
+                  ClipOval(
+                    child: Image.asset(
+                      currentAvatar.assetPath,
+                      width: 20,
+                      height: 20,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Text(currentAvatar.emoji, style: const TextStyle(fontSize: 16)),
+                    ),
+                  ),
                   const SizedBox(width: 6),
                   Text(
                     currentAvatar.name,
@@ -403,11 +411,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                           ]
                         : null,
                   ),
-                  child: Center(
-                    child: Text(
-                      av.emoji,
-                      style: TextStyle(
-                        fontSize: isSelected ? 26 : 22,
+                  child: ClipOval(
+                    child: Image.asset(
+                      av.assetPath,
+                      width: isSelected ? 56 : 46,
+                      height: isSelected ? 56 : 46,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Center(
+                        child: Text(
+                          av.emoji,
+                          style: TextStyle(
+                            fontSize: isSelected ? 26 : 22,
+                          ),
+                        ),
                       ),
                     ),
                   ),

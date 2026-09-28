@@ -74,20 +74,30 @@ class PlayerAvatar extends StatelessWidget {
                     ? [BoxShadow(color: color.withOpacity(0.5), blurRadius: 8)]
                     : null,
               ),
-              child: Center(
-                child: emoji != null
-                    ? Text(
-                        emoji,
-                        style: TextStyle(
-                          fontSize: size * 0.52,
+              child: ClipOval(
+                child: vzlaAvatar != null
+                    ? Image.asset(
+                        vzlaAvatar.assetPath,
+                        width: size,
+                        height: size,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Center(
+                          child: Text(
+                            vzlaAvatar.emoji,
+                            style: TextStyle(
+                              fontSize: size * 0.52,
+                            ),
+                          ),
                         ),
                       )
-                    : Text(
-                        initial,
-                        style: GoogleFonts.nunito(
-                          color: Colors.white,
-                          fontSize: size * 0.42,
-                          fontWeight: FontWeight.w800,
+                    : Center(
+                        child: Text(
+                          initial,
+                          style: GoogleFonts.nunito(
+                            color: Colors.white,
+                            fontSize: size * 0.42,
+                            fontWeight: FontWeight.w800,
+                          ),
                         ),
                       ),
               ),
