@@ -222,7 +222,6 @@ class SocketService {
   void setReady() {
     _ensureConnected(() {
       _socket?.emit('player-ready');
-      _socket?.emit('set-ready');
     });
   }
 
@@ -240,7 +239,6 @@ class SocketService {
   void sendGuess(String text) {
     _ensureConnected(() {
       _socket?.emit('guess', {'text': text});
-      _socket?.emit('send-guess', {'text': text});
     });
   }
 

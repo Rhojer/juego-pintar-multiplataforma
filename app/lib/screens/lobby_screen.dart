@@ -41,7 +41,14 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
     super.dispose();
   }
 
+  DateTime? _lastReadyClick;
+
   void _toggleReady() {
+    final now = DateTime.now();
+    if (_lastReadyClick != null && now.difference(_lastReadyClick!).inMilliseconds < 400) {
+      return;
+    }
+    _lastReadyClick = now;
     ref.read(gameProvider.notifier).setReady();
   }
 
