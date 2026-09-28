@@ -499,7 +499,7 @@ class DrawingNotifier extends StateNotifier<DrawingState> {
   /// Buffer for the current stroke's points before sending
   final List<Map<String, double>> _pointBuffer = [];
   String _color = '#000000';
-  double _strokeWidth = 4.0;
+  double _strokeWidth = 8.0;
   bool _isEraser = false;
 
   void init() {
