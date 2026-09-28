@@ -104,6 +104,7 @@ class GameRoom {
     this.drawOrderIndex    = 0;      // pointer into drawOrder
     this.turnTimer         = null;   // setTimeout handle for turn end
     this.hintTimer         = null;   // setInterval handle for hint reveals
+    this.tickTimer         = null;   // setInterval handle for seconds countdown
     this.turnStartTime     = null;   // Date.ms when current turn started
 
     /** @type {Set<string>} socket IDs that guessed correctly this turn */
@@ -225,7 +226,20 @@ class GameRoom {
     }
 
     console.log(`[Room ${this.code}] Game started with ${this.players.size} players.`);
-    this._startTurn();
+
+    // Broadcast 'game-started' to everyone in the room
+    this._io.to(this.code).emit('game-started', {
+      totalRounds:  this.totalRounds,
+      currentRound: this.currentRound,
+      players:      this.getPublicState().players,
+    });
+
+    // Start first turn with a brief 1-second delay so clients can navigate smoothly
+    setTimeout(() => {
+      if (this.status === 'playing') {
+        this._startTurn();
+      }
+    }, 1000);
   }
 
   /**
@@ -271,24 +285,39 @@ class GameRoom {
     this.currentWordHint = buildHint(this.currentWord);
     this.turnStartTime   = Date.now();
 
-    console.log(`[Room ${this.code}] Round ${this.currentRound} — ${this.players.get(drawerId).nickname} draws "${this.currentWord}"`);
+    console.log(`[Room ${this.code}] Round ${this.currentRound} — ${this.players.get(drawerId)?.nickname} draws "${this.currentWord}"`);
 
-    // Emit 'turn-started' to everyone in the room
-    this._io.to(this.code).emit('turn-started', {
-      drawerId:              this.currentDrawerId,
-      drawerNickname:        this.players.get(drawerId).nickname,
-      wordHint:              this.currentWordHint,
-      wordLength:            this.currentWord.length,
-      roundTime:             TURN_DURATION,
-      currentRound:          this.currentRound,
-      totalRounds:           this.totalRounds,
-    });
+    // Emit 'turn-started' to each socket: drawer gets secret word, guessers get hint
+    const publicPlayers = this.getPublicState().players;
+    for (const p of this.players.values()) {
+      const isDrawer = p.id === drawerId;
+      this._io.to(p.id).emit('turn-started', {
+        drawerId:              this.currentDrawerId,
+        drawerNickname:        this.players.get(drawerId)?.nickname,
+        wordHint:              this.currentWordHint,
+        wordLength:            this.currentWord.length,
+        roundTime:             TURN_DURATION,
+        currentRound:          this.currentRound,
+        totalRounds:           this.totalRounds,
+        word:                  isDrawer ? this.currentWord : null,
+        players:               publicPlayers,
+      });
+    }
 
-    // Send the actual word only to the drawer via private event
+    // Also send 'your-word' directly to drawer for full compatibility
     this._io.to(drawerId).emit('your-word', {
       word:     this.currentWord,
       wordHint: this.currentWordHint,
     });
+
+    // Second-by-second countdown for client timer
+    this._timeLeft = TURN_DURATION;
+    if (this.tickTimer) clearInterval(this.tickTimer);
+    this.tickTimer = setInterval(() => {
+      this._timeLeft = Math.max(0, this._timeLeft - 1);
+      this._io.to(this.code).emit('timer-tick', this._timeLeft);
+      this._io.to(this.code).emit('timer-tick-data', { seconds: this._timeLeft });
+    }, 1000);
 
     // Schedule hint reveals (every HINT_INTERVAL seconds)
     this.hintTimer = setInterval(() => {
@@ -298,7 +327,8 @@ class GameRoom {
         this.currentWordHint,
         this._hintRevealCount,
       );
-      this._io.to(this.code).emit('hint-update', { wordHint: this.currentWordHint });
+      this._io.to(this.code).emit('hint-update', { wordHint: this.currentWordHint, hint: this.currentWordHint });
+      this._io.to(this.code).emit('word-hint-update', { wordHint: this.currentWordHint, hint: this.currentWordHint });
     }, HINT_INTERVAL * 1000);
 
     // Schedule automatic turn end
@@ -364,7 +394,9 @@ class GameRoom {
     console.log(`[Room ${this.code}] Game over. Winner: ${leaderboard[0]?.nickname}`);
 
     if (this._io) {
-      this._io.to(this.code).emit('game-over', { leaderboard });
+      const publicPlayers = this.getPublicState().players;
+      this._io.to(this.code).emit('game-over', { leaderboard, players: publicPlayers });
+      this._io.to(this.code).emit('game-ended', { leaderboard, players: publicPlayers });
     }
 
     // Reset to waiting after a short delay
@@ -487,6 +519,10 @@ class GameRoom {
     if (this.hintTimer) {
       clearInterval(this.hintTimer);
       this.hintTimer = null;
+    }
+    if (this.tickTimer) {
+      clearInterval(this.tickTimer);
+      this.tickTimer = null;
     }
   }
 }

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -18,13 +19,26 @@ class LobbyScreen extends ConsumerStatefulWidget {
 }
 
 class _LobbyScreenState extends ConsumerState<LobbyScreen> {
+  StreamSubscription? _gameStartedSub;
+  StreamSubscription? _turnStartedSub;
+
   @override
   void initState() {
     super.initState();
-    // Navigate to game when it starts
-    SocketService().onGameStarted.listen((_) {
+    // Navigate to game when game-started or turn-started fires
+    _gameStartedSub = SocketService().onGameStarted.listen((_) {
       if (mounted) context.go('/game');
     });
+    _turnStartedSub = SocketService().onTurnStarted.listen((_) {
+      if (mounted) context.go('/game');
+    });
+  }
+
+  @override
+  void dispose() {
+    _gameStartedSub?.cancel();
+    _turnStartedSub?.cancel();
+    super.dispose();
   }
 
   void _toggleReady() {
@@ -47,6 +61,12 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<GameState?>(gameProvider, (prev, next) {
+      if (next?.status == GameStatus.playing && mounted) {
+        context.go('/game');
+      }
+    });
+
     final gameState = ref.watch(gameProvider);
 
     if (gameState == null) {
