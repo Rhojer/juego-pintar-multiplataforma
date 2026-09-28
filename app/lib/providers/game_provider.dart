@@ -356,16 +356,16 @@ class GameNotifier extends Notifier<GameState?> {
 
   // ─── Public Actions ───
 
-  void joinPublic(String nickname) {
-    _socket.joinPublic(nickname);
+  void joinPublic(String nickname, {String avatar = 'arepa'}) {
+    _socket.joinPublic(nickname, avatar: avatar);
   }
 
-  void createPrivate(String nickname) {
-    _socket.createPrivate(nickname);
+  void createPrivate(String nickname, {String avatar = 'arepa'}) {
+    _socket.createPrivate(nickname, avatar: avatar);
   }
 
-  void joinPrivate(String nickname, String roomCode) {
-    _socket.joinPrivate(nickname, roomCode);
+  void joinPrivate(String nickname, String roomCode, {String avatar = 'arepa'}) {
+    _socket.joinPrivate(nickname, roomCode, avatar: avatar);
   }
 
   void setReady() {

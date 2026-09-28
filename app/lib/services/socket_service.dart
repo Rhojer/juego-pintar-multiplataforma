@@ -125,12 +125,14 @@ class SocketService {
       final playerMap = map['player'] is Map ? map['player'] as Map : null;
       final sessionToken = (map['sessionToken'] ?? playerMap?['sessionToken']) as String? ?? '';
       final nickname = (map['nickname'] ?? playerMap?['nickname']) as String? ?? '';
+      final avatar = (map['avatar'] ?? playerMap?['avatar']) as String? ?? 'arepa';
 
       if (roomCode.isNotEmpty && sessionToken.isNotEmpty) {
         SessionStorage.saveSession(
           roomCode: roomCode,
           sessionToken: sessionToken,
           nickname: nickname,
+          avatar: avatar,
         );
       }
       _roomJoinedCtrl.add(map);
@@ -141,12 +143,15 @@ class SocketService {
       final roomCode = map['roomCode'] as String? ?? '';
       final sessionToken = map['sessionToken'] as String? ?? '';
       final nickname = map['nickname'] as String? ?? '';
+      final playerMap = map['player'] is Map ? map['player'] as Map : null;
+      final avatar = (map['avatar'] ?? playerMap?['avatar']) as String? ?? 'arepa';
 
       if (roomCode.isNotEmpty && sessionToken.isNotEmpty) {
         SessionStorage.saveSession(
           roomCode: roomCode,
           sessionToken: sessionToken,
           nickname: nickname,
+          avatar: avatar,
         );
       }
       _reconnectedSuccessCtrl.add(map);
@@ -252,23 +257,27 @@ class SocketService {
   // ──────────────────────────── Emit Methods ────────────────────────────
 
   /// Join the public matchmaking queue
-  void joinPublic(String nickname) {
+  void joinPublic(String nickname, {String avatar = 'arepa'}) {
     _ensureConnected(() {
-      _socket?.emit('join-public', {'nickname': nickname});
+      _socket?.emit('join-public', {'nickname': nickname, 'avatar': avatar});
     });
   }
 
   /// Create a new private room
-  void createPrivate(String nickname) {
+  void createPrivate(String nickname, {String avatar = 'arepa'}) {
     _ensureConnected(() {
-      _socket?.emit('create-private', {'nickname': nickname});
+      _socket?.emit('create-private', {'nickname': nickname, 'avatar': avatar});
     });
   }
 
   /// Join an existing private room by code
-  void joinPrivate(String nickname, String roomCode) {
+  void joinPrivate(String nickname, String roomCode, {String avatar = 'arepa'}) {
     _ensureConnected(() {
-      _socket?.emit('join-private', {'nickname': nickname, 'roomCode': roomCode.toUpperCase()});
+      _socket?.emit('join-private', {
+        'nickname': nickname,
+        'roomCode': roomCode.toUpperCase(),
+        'avatar': avatar,
+      });
     });
   }
 

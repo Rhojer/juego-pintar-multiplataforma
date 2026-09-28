@@ -362,6 +362,7 @@ class _PlayerCard extends StatelessWidget {
           children: [
             PlayerAvatar(
               nickname: player.nickname,
+              avatar: player.avatar,
               size: 36,
               score: null,
             ),

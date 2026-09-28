@@ -35,14 +35,14 @@ function registerHandlers(io) {
 
     // ==================================================================
     // JOIN PUBLIC ROOM
-    // Payload: { nickname: string }
+    // Payload: { nickname: string, avatar?: string }
     // ==================================================================
-    socket.on('join-public', ({ nickname } = {}) => {
+    socket.on('join-public', ({ nickname, avatar } = {}) => {
       try {
         const nick = sanitizeNickname(nickname);
         const room = gameManager.getOrCreatePublicRoom();
 
-        const player = room.addPlayer(socket.id, nick);
+        const player = room.addPlayer(socket.id, nick, avatar);
         if (!player) {
           socket.emit('join-error', { message: 'No se pudo unir: sala llena.' });
           return;
@@ -117,14 +117,14 @@ function registerHandlers(io) {
 
     // ==================================================================
     // CREATE PRIVATE ROOM
-    // Payload: { nickname: string }
+    // Payload: { nickname: string, avatar?: string }
     // ==================================================================
-    socket.on('create-private', ({ nickname } = {}) => {
+    socket.on('create-private', ({ nickname, avatar } = {}) => {
       try {
         const nick = sanitizeNickname(nickname);
         const room = gameManager.createRoom(true);
 
-        const player = room.addPlayer(socket.id, nick);
+        const player = room.addPlayer(socket.id, nick, avatar);
         if (!player) {
           // Should never happen for a brand-new room, but guard anyway
           socket.emit('join-error', { message: 'No se pudo crear la sala.' });
@@ -157,9 +157,9 @@ function registerHandlers(io) {
 
     // ==================================================================
     // JOIN PRIVATE ROOM
-    // Payload: { nickname: string, roomCode: string }
+    // Payload: { nickname: string, roomCode: string, avatar?: string }
     // ==================================================================
-    socket.on('join-private', ({ nickname, roomCode } = {}) => {
+    socket.on('join-private', ({ nickname, roomCode, avatar } = {}) => {
       try {
         if (!roomCode || typeof roomCode !== 'string') {
           socket.emit('join-error', { message: 'Código de sala inválido.' });
@@ -180,7 +180,7 @@ function registerHandlers(io) {
         }
 
         const nick   = sanitizeNickname(nickname);
-        const player = room.addPlayer(socket.id, nick);
+        const player = room.addPlayer(socket.id, nick, avatar);
 
         if (!player) {
           socket.emit('join-error', { message: 'No se pudo unir a la sala.' });
@@ -359,6 +359,16 @@ function registerHandlers(io) {
         if (!player) return;
 
         if (typeof text !== 'string' || !text.trim()) return;
+
+        // Rate limiting: max 5 guesses per second per player to prevent flood
+        const now = Date.now();
+        if (!socket.guessTimes) socket.guessTimes = [];
+        socket.guessTimes = socket.guessTimes.filter((t) => now - t < 1000);
+        if (socket.guessTimes.length >= 5) {
+          return;
+        }
+        socket.guessTimes.push(now);
+
         const guessText = text.trim().substring(0, 100);
 
         const result = room.handleGuess(socket.id, guessText);

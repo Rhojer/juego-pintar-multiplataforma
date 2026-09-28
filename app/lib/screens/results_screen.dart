@@ -354,7 +354,12 @@ class _LeaderboardCard extends StatelessWidget {
           ),
           const SizedBox(width: 12),
           // Avatar
-          PlayerAvatar(nickname: player.nickname, size: 40, score: null),
+          PlayerAvatar(
+            nickname: player.nickname,
+            avatar: player.avatar,
+            size: 40,
+            score: null,
+          ),
           const SizedBox(width: 12),
           // Name
           Expanded(
