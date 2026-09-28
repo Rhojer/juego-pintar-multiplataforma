@@ -152,7 +152,16 @@ class SocketService {
       _gameEndedCtrl.add(_toMap(data));
     });
 
+    _socket!.on('game-over', (data) {
+      _gameEndedCtrl.add(_toMap(data));
+    });
+
     _socket!.on('timer-tick', (data) {
+      final seconds = data is int ? data : (data as Map)['seconds'] as int? ?? 0;
+      _timerTickCtrl.add(seconds);
+    });
+
+    _socket!.on('timer-tick-data', (data) {
       final seconds = data is int ? data : (data as Map)['seconds'] as int? ?? 0;
       _timerTickCtrl.add(seconds);
     });
@@ -176,7 +185,12 @@ class SocketService {
     });
 
     _socket!.on('word-hint-update', (data) {
-      final hint = data is Map ? data['hint'] as String? : data.toString();
+      final hint = data is Map ? (data['wordHint'] ?? data['hint']) as String? : data.toString();
+      _wordHintUpdateCtrl.add(hint ?? '');
+    });
+
+    _socket!.on('hint-update', (data) {
+      final hint = data is Map ? (data['wordHint'] ?? data['hint']) as String? : data.toString();
       _wordHintUpdateCtrl.add(hint ?? '');
     });
   }
@@ -224,7 +238,10 @@ class SocketService {
 
   /// Send a guess (or a chat message if not in drawing phase)
   void sendGuess(String text) {
-    _socket?.emit('send-guess', {'text': text});
+    _ensureConnected(() {
+      _socket?.emit('guess', {'text': text});
+      _socket?.emit('send-guess', {'text': text});
+    });
   }
 
   // ──────────────────────────── Helpers ────────────────────────────

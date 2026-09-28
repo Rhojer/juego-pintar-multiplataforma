@@ -251,10 +251,10 @@ function registerHandlers(io) {
     });
 
     // ==================================================================
-    // GUESS
+    // GUESS (supports both 'guess' and 'send-guess')
     // Payload: { text: string }
     // ==================================================================
-    socket.on('guess', ({ text } = {}) => {
+    function handleGuess({ text } = {}) {
       try {
         const room = getMyRoom();
         if (!room || room.status !== 'playing') return;
@@ -276,6 +276,7 @@ function registerHandlers(io) {
           // Broadcast correct-guess notification (hides the actual word from chat)
           io.to(room.code).emit('correct-guess', {
             socketId: socket.id,
+            playerId: socket.id,
             nickname: player.nickname,
             points:   result.points,
             players:  room.getPublicState().players,
@@ -293,6 +294,7 @@ function registerHandlers(io) {
           io.to(room.code).emit('chat-message', {
             type:      'guess',
             socketId:  socket.id,
+            playerId:  socket.id,
             nickname:  player.nickname,
             text:      guessText,
             isCorrect: false,
@@ -301,7 +303,10 @@ function registerHandlers(io) {
       } catch (err) {
         console.error('[guess] Error:', err);
       }
-    });
+    }
+
+    socket.on('guess', handleGuess);
+    socket.on('send-guess', handleGuess);
 
     // ==================================================================
     // CHAT MESSAGE (non-guess chat, e.g. lobby chat)

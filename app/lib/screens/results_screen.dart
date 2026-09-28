@@ -20,6 +20,7 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen>
     with TickerProviderStateMixin {
   int _countdown = 8; // seconds until next round auto-advance
   Timer? _timer;
+  StreamSubscription? _turnStartedSub;
   late final AnimationController _slideCtrl;
   late final List<Animation<Offset>> _slideAnims;
   bool _isGameOver = false;
@@ -50,7 +51,13 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen>
     );
     _slideCtrl.forward();
 
-    // Auto-advance countdown (only for mid-game results)
+    // Listen for next turn starting from server
+    _turnStartedSub = SocketService().onTurnStarted.listen((_) {
+      _timer?.cancel();
+      if (mounted) context.go('/game');
+    });
+
+    // Auto-advance countdown fallback (only for mid-game results)
     if (!_isGameOver) {
       _timer = Timer.periodic(const Duration(seconds: 1), (t) {
         setState(() => _countdown--);
@@ -59,15 +66,13 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen>
           if (mounted) context.go('/game');
         }
       });
-
-      // Also listen for the next turn starting from the server
-      // The server will send 'turn-started' which navigates us forward
     }
   }
 
   @override
   void dispose() {
     _timer?.cancel();
+    _turnStartedSub?.cancel();
     _slideCtrl.dispose();
     super.dispose();
   }
