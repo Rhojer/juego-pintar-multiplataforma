@@ -7,6 +7,7 @@ import '../core/constants.dart';
 import '../models/game_state.dart';
 import '../models/player.dart';
 import '../providers/game_provider.dart';
+import '../services/socket_service.dart';
 import '../widgets/player_avatar.dart';
 
 class ResultsScreen extends ConsumerStatefulWidget {
