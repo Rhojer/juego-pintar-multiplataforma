@@ -66,6 +66,20 @@ function revealNextLetter(word, hint, revealCount) {
   return hintArr.join('');
 }
 
+/**
+ * Normalizes a string for comparison: removes accents, trims, and converts to lowercase.
+ * e.g. 'Limón' -> 'limon', 'plátano' -> 'platano', 'avión' -> 'avion'
+ * @param {string} str
+ * @returns {string}
+ */
+function normalizeForComparison(str) {
+  return (str || '')
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+}
+
 
 
 // ---------------------------------------------------------------------------
@@ -106,6 +120,9 @@ class GameRoom {
 
     /** @type {Set<string>} socket IDs that guessed correctly this turn */
     this.correctGuessers   = new Set();
+
+    /** @type {Map<string, number>} points earned this turn by each player */
+    this.turnPointsGained  = new Map();
 
     /** @type {SocketIO.Server} set via startGame() */
     this._io               = null;
@@ -277,6 +294,7 @@ class GameRoom {
     // Clear any lingering timers
     this._clearTimers();
     this.correctGuessers.clear();
+    this.turnPointsGained.clear();
     this._hintRevealCount = 0;
     this.currentStrokes = [];
 
@@ -311,7 +329,7 @@ class GameRoom {
     this.offeredWords    = pickThreeWords();
     const drawerNickname = this.players.get(drawerId)?.nickname || 'Dibujante';
 
-    console.log(`[Room ${this.code}] Round ${this.currentRound} — ${drawerNickname} is choosing between: ${this.offeredWords.join(', ')}`);
+    console.log(`[Room ${this.code}] Round ${this.currentRound}/${this.totalRounds} — ${drawerNickname} is choosing between: ${this.offeredWords.join(', ')}`);
 
     // Emit 'choose-word' to the drawer with the 3 choices
     this._io.to(drawerId).emit('choose-word', {
@@ -381,7 +399,7 @@ class GameRoom {
     this.currentStrokes  = [];
 
     const drawerNickname = this.players.get(this.currentDrawerId)?.nickname || 'Dibujante';
-    console.log(`[Room ${this.code}] Round ${this.currentRound} — ${drawerNickname} draws "${this.currentWord}"`);
+    console.log(`[Room ${this.code}] Round ${this.currentRound}/${this.totalRounds} — ${drawerNickname} draws "${this.currentWord}"`);
 
     // Emit 'turn-started' to each socket: drawer gets secret word, guessers get hint
     const publicPlayers = this.getPublicState().players;
@@ -449,26 +467,32 @@ class GameRoom {
     if (this.currentDrawerId && this.players.has(this.currentDrawerId)) {
       const drawerBonus = this.correctGuessers.size * DRAWER_SCORE;
       this.players.get(this.currentDrawerId).score += drawerBonus;
+      if (drawerBonus > 0) {
+        this.turnPointsGained.set(this.currentDrawerId, drawerBonus);
+      }
     }
 
     console.log(`[Room ${this.code}] Turn ended. Word was "${this.currentWord}". Guessed: ${this.correctGuessers.size}`);
 
     this._io.to(this.code).emit('turn-ended', {
-      word:    this.currentWord,
-      players: [...this.players.values()].map((p) => ({
-        id:       p.id,
-        nickname: p.nickname,
-        score:    p.score,
+      word:         this.currentWord,
+      players:      [...this.players.values()].map((p) => ({
+        id:           p.id,
+        nickname:     p.nickname,
+        score:        p.score,
+        pointsGained: this.turnPointsGained.get(p.id) || 0,
       })),
       allGuessed,
+      currentRound: this.currentRound,
+      totalRounds:  this.totalRounds,
     });
 
-    // Pause briefly before starting the next turn so clients can show results
+    // Pause 5 seconds before starting the next turn so clients can show minimal results overlay
     setTimeout(() => {
       if (this.status === 'playing') {
         this._startTurn();
       }
-    }, 4000);
+    }, 5000);
   }
 
   /**
@@ -519,6 +543,7 @@ class GameRoom {
     this.offeredWords    = [];
     this.currentStrokes  = [];
     this.correctGuessers.clear();
+    this.turnPointsGained.clear();
 
     for (const player of this.players.values()) {
       player.score     = 0;
@@ -552,9 +577,8 @@ class GameRoom {
       return { correct: false, alreadyGuessed: true };
     }
 
-    const normalizedGuess = guess.trim().toLowerCase();
-    const normalizedWord  = (this.currentWord || '').toLowerCase();
-    const isCorrect       = normalizedGuess === normalizedWord;
+    // Accent-insensitive and case-insensitive check
+    const isCorrect = normalizeForComparison(guess) === normalizeForComparison(this.currentWord);
 
     if (isCorrect) {
       const timeLeft = this._getTimeLeft();
@@ -562,6 +586,7 @@ class GameRoom {
 
       if (this.players.has(socketId)) {
         this.players.get(socketId).score += points;
+        this.turnPointsGained.set(socketId, points);
       }
 
       this.correctGuessers.add(socketId);
@@ -570,11 +595,22 @@ class GameRoom {
       const guessers = [...this.players.keys()].filter(
         (id) => id !== this.currentDrawerId,
       );
-      const allGuessed = guessers.every((id) => this.correctGuessers.has(id));
+      const allGuessed = guessers.length > 0 && guessers.every((id) => this.correctGuessers.has(id));
 
       if (allGuessed) {
-        // Everyone got it — end turn early
-        setTimeout(() => this._endTurn(true), 1500);
+        // Immediately end countdown: snap timer to 0 and end turn early
+        this._timeLeft = 0;
+        this._io.to(this.code).emit('timer-tick', 0);
+        this._io.to(this.code).emit('timer-tick-data', { seconds: 0, phase: 'drawing' });
+        if (this.tickTimer) {
+          clearInterval(this.tickTimer);
+          this.tickTimer = null;
+        }
+        if (this.turnTimer) {
+          clearTimeout(this.turnTimer);
+          this.turnTimer = null;
+        }
+        setTimeout(() => this._endTurn(true), 600);
       }
 
       return { correct: true, alreadyGuessed: false, points, allGuessed };

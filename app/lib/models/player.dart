@@ -10,6 +10,7 @@ class Player {
     this.isReady = false,
     this.isDrawing = false,
     this.hasGuessed = false,
+    this.pointsGained = 0,
   });
 
   final String id;
@@ -18,6 +19,7 @@ class Player {
   final bool isReady;
   final bool isDrawing;
   final bool hasGuessed;
+  final int pointsGained;
 
   /// Creates a [Player] from a JSON map received from the server
   factory Player.fromJson(Map<String, dynamic> json) {
@@ -28,6 +30,7 @@ class Player {
       isReady: json['isReady'] as bool? ?? false,
       isDrawing: json['isDrawing'] as bool? ?? false,
       hasGuessed: json['hasGuessed'] as bool? ?? false,
+      pointsGained: (json['pointsGained'] as num?)?.toInt() ?? 0,
     );
   }
 
@@ -39,6 +42,7 @@ class Player {
         'isReady': isReady,
         'isDrawing': isDrawing,
         'hasGuessed': hasGuessed,
+        'pointsGained': pointsGained,
       };
 
   /// Returns a copy of this [Player] with the given fields replaced
@@ -49,6 +53,7 @@ class Player {
     bool? isReady,
     bool? isDrawing,
     bool? hasGuessed,
+    int? pointsGained,
   }) {
     return Player(
       id: id ?? this.id,
@@ -57,6 +62,7 @@ class Player {
       isReady: isReady ?? this.isReady,
       isDrawing: isDrawing ?? this.isDrawing,
       hasGuessed: hasGuessed ?? this.hasGuessed,
+      pointsGained: pointsGained ?? this.pointsGained,
     );
   }
 

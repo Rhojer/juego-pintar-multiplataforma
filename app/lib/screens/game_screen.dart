@@ -22,15 +22,11 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   final _guessCtrl = TextEditingController();
   final _chatScrollCtrl = ScrollController();
   bool _guessedCorrectly = false;
-  bool _isWordDialogShowing = false;
 
   @override
   void initState() {
     super.initState();
-    // Navigate to results on turn end and game end
-    SocketService().onTurnEnded.listen((_) {
-      if (mounted) context.go('/results');
-    });
+    // Navigate to final results ONLY when the whole game ends (all rounds completed)
     SocketService().onGameEnded.listen((_) {
       if (mounted) context.go('/results');
     });
@@ -44,43 +40,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     });
     SocketService().onTurnStarted.listen((_) {
       if (mounted) {
-        if (_isWordDialogShowing && Navigator.canPop(context)) {
-          Navigator.of(context).pop();
-        }
         setState(() => _guessedCorrectly = false);
       }
-    });
-
-    // Handle 3-word choices for drawer
-    SocketService().onWordChoices.listen((data) {
-      if (!mounted) return;
-      final rawWords = data['words'] as List<dynamic>?;
-      if (rawWords == null || rawWords.isEmpty) return;
-      final words = rawWords.map((w) => w.toString()).toList();
-      _showWordSelectionDialog(words);
-    });
-  }
-
-  void _showWordSelectionDialog(List<String> words) {
-    if (_isWordDialogShowing) return;
-    _isWordDialogShowing = true;
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) {
-        return _WordSelectionDialog(
-          words: words,
-          onWordChosen: (chosenWord) {
-            SocketService().chooseWord(chosenWord);
-            if (Navigator.canPop(ctx)) {
-              Navigator.of(ctx).pop();
-            }
-          },
-        );
-      },
-    ).then((_) {
-      _isWordDialogShowing = false;
     });
   }
 
@@ -117,29 +78,49 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
+    final showWordChoices = gameState.amIDrawing &&
+        gameState.isChoosingWord &&
+        gameState.offeredWords != null &&
+        gameState.offeredWords!.isNotEmpty;
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
-        child: Column(
+        child: Stack(
           children: [
-            _TopBar(gameState: gameState),
-            Expanded(
-              child: isLandscape
-                  ? _LandscapeLayout(
-                      gameState: gameState,
-                      guessCtrl: _guessCtrl,
-                      chatScrollCtrl: _chatScrollCtrl,
-                      guessedCorrectly: _guessedCorrectly,
-                      onSendGuess: _sendGuess,
-                    )
-                  : _PortraitLayout(
-                      gameState: gameState,
-                      guessCtrl: _guessCtrl,
-                      chatScrollCtrl: _chatScrollCtrl,
-                      guessedCorrectly: _guessedCorrectly,
-                      onSendGuess: _sendGuess,
-                    ),
+            Column(
+              children: [
+                _TopBar(gameState: gameState),
+                Expanded(
+                  child: isLandscape
+                      ? _LandscapeLayout(
+                          gameState: gameState,
+                          guessCtrl: _guessCtrl,
+                          chatScrollCtrl: _chatScrollCtrl,
+                          guessedCorrectly: _guessedCorrectly,
+                          onSendGuess: _sendGuess,
+                        )
+                      : _PortraitLayout(
+                          gameState: gameState,
+                          guessCtrl: _guessCtrl,
+                          chatScrollCtrl: _chatScrollCtrl,
+                          guessedCorrectly: _guessedCorrectly,
+                          onSendGuess: _sendGuess,
+                        ),
+                ),
+              ],
             ),
+            // 1. In-place Word Selection Overlay for the drawer (cannot be missed)
+            if (showWordChoices)
+              _WordSelectionOverlay(
+                words: gameState.offeredWords!,
+                onWordChosen: (chosenWord) {
+                  ref.read(gameProvider.notifier).chooseWord(chosenWord);
+                },
+              ),
+            // 2. Minimalist blurred scoreboard overlay at turn end
+            if (gameState.showTurnEndOverlay)
+              _TurnEndScoreboardOverlay(gameState: gameState),
           ],
         ),
       ),
@@ -1044,3 +1025,341 @@ class _GuessInput extends StatelessWidget {
     );
   }
 }
+
+// ═══════════════════════════════════════════════════════════
+// OVERLAYS (Word selection & Turn end scoreboard)
+// ═══════════════════════════════════════════════════════════
+
+class _WordSelectionOverlay extends ConsumerWidget {
+  const _WordSelectionOverlay({
+    required this.words,
+    required this.onWordChosen,
+  });
+
+  final List<String> words;
+  final ValueChanged<String> onWordChosen;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final timer = ref.watch(timerProvider);
+
+    return Positioned.fill(
+      child: BackdropFilter(
+        filter: ui.ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+        child: Container(
+          color: Colors.black.withOpacity(0.75),
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 420),
+              child: Card(
+                color: AppColors.surface,
+                elevation: 16,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                  side: const BorderSide(color: AppColors.secondary, width: 2),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.brush_rounded, color: AppColors.secondary, size: 28),
+                          const SizedBox(width: 8),
+                          Text(
+                            '¡Te toca dibujar!',
+                            style: GoogleFonts.nunito(
+                              color: Colors.white,
+                              fontSize: 22,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Elige una palabra antes de que se acabe el tiempo ($timer s):',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.nunito(
+                          color: Colors.white70,
+                          fontSize: 14,
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      ...words.map(
+                        (word) => Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.cardColor,
+                                foregroundColor: Colors.white,
+                                elevation: 4,
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                  side: const BorderSide(
+                                    color: Colors.white24,
+                                    width: 1,
+                                  ),
+                                ),
+                              ),
+                              onPressed: () => onWordChosen(word),
+                              child: Text(
+                                word.toUpperCase(),
+                                style: GoogleFonts.nunito(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 1.2,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TurnEndScoreboardOverlay extends StatelessWidget {
+  const _TurnEndScoreboardOverlay({required this.gameState});
+
+  final GameState gameState;
+
+  @override
+  Widget build(BuildContext context) {
+    final sortedPlayers = [...gameState.players]
+      ..sort((a, b) => b.score.compareTo(a.score));
+
+    final revealedWord = gameState.currentWord?.trim();
+
+    return Positioned.fill(
+      child: BackdropFilter(
+        filter: ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: Container(
+          color: Colors.black.withOpacity(0.7),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 460),
+              child: Card(
+                color: AppColors.surface,
+                elevation: 20,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(22),
+                  side: BorderSide(color: Colors.white.withOpacity(0.12), width: 1.5),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(22),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Round badge
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppColors.cardColor,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.white12),
+                        ),
+                        child: Text(
+                          'Ronda ${gameState.currentRound} de ${gameState.totalRounds}',
+                          style: GoogleFonts.nunito(
+                            color: Colors.white70,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        '¡Fin del turno!',
+                        style: GoogleFonts.nunito(
+                          color: Colors.white,
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      if (revealedWord != null && revealedWord.isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              'La palabra era: ',
+                              style: GoogleFonts.nunito(
+                                color: Colors.white60,
+                                fontSize: 14,
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: AppColors.secondary.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: AppColors.secondary),
+                              ),
+                              child: Text(
+                                revealedWord.toUpperCase(),
+                                style: GoogleFonts.nunito(
+                                  color: AppColors.secondary,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 1.1,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                      const SizedBox(height: 18),
+                      const Divider(color: Colors.white12, height: 1),
+                      const SizedBox(height: 12),
+                      // Minimalist player list sorted by points
+                      ListView.separated(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: sortedPlayers.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 8),
+                        itemBuilder: (context, index) {
+                          final player = sortedPlayers[index];
+                          final isMe = player.id == gameState.myId;
+                          final pointsGained = player.pointsGained;
+
+                          String rankBadge;
+                          if (index == 0) {
+                            rankBadge = '🥇';
+                          } else if (index == 1) {
+                            rankBadge = '🥈';
+                          } else if (index == 2) {
+                            rankBadge = '🥉';
+                          } else {
+                            rankBadge = '${index + 1}°';
+                          }
+
+                          return Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: isMe ? AppColors.cardColor : Colors.white.withOpacity(0.04),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: isMe ? AppColors.accent.withOpacity(0.5) : Colors.transparent,
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                SizedBox(
+                                  width: 28,
+                                  child: Text(
+                                    rankBadge,
+                                    style: const TextStyle(fontSize: 16),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Row(
+                                    children: [
+                                      Flexible(
+                                        child: Text(
+                                          player.nickname,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: GoogleFonts.nunito(
+                                            color: Colors.white,
+                                            fontWeight: isMe ? FontWeight.w800 : FontWeight.w600,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                      ),
+                                      if (isMe) ...[
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          '(tú)',
+                                          style: GoogleFonts.nunito(
+                                            color: AppColors.secondary,
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                                if (pointsGained > 0)
+                                  Container(
+                                    margin: const EdgeInsets.only(right: 10),
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.correct.withOpacity(0.2),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(color: AppColors.correct.withOpacity(0.6)),
+                                    ),
+                                    child: Text(
+                                      '+$pointsGained pts',
+                                      style: GoogleFonts.nunito(
+                                        color: AppColors.correct,
+                                        fontWeight: FontWeight.w800,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ),
+                                Text(
+                                  '${player.score} pts',
+                                  style: GoogleFonts.nunito(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 18),
+                      // Waiting for next turn status
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: AppColors.secondary,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Text(
+                            'Siguiente turno en breve...',
+                            style: GoogleFonts.nunito(
+                              color: Colors.white60,
+                              fontSize: 13,
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
