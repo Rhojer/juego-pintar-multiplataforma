@@ -66,6 +66,8 @@ class GameState {
     this.currentWord,       // Only populated for the drawer
     this.lastWord,          // Set at end of turn so guessers can see it
     this.isChoosingWord = false,
+    this.offeredWords,
+    this.showTurnEndOverlay = false,
   });
 
   final String roomCode;
@@ -80,6 +82,8 @@ class GameState {
   final String myId;
   final String myNickname;
   final bool isChoosingWord;
+  final List<String>? offeredWords;
+  final bool showTurnEndOverlay;
 
   /// Underscores and revealed letters shown to guessers: e.g. "_ _ v _ l _"
   final String? wordHint;
@@ -122,6 +126,8 @@ class GameState {
       myId: myId,
       myNickname: myNickname,
       isChoosingWord: false,
+      offeredWords: null,
+      showTurnEndOverlay: false,
     );
   }
 
@@ -143,8 +149,11 @@ class GameState {
     String? currentWord,
     String? lastWord,
     bool? isChoosingWord,
+    List<String>? offeredWords,
+    bool? showTurnEndOverlay,
     bool clearCurrentWord = false,
     bool clearLastWord = false,
+    bool clearOfferedWords = false,
   }) {
     return GameState(
       roomCode: roomCode ?? this.roomCode,
@@ -162,6 +171,8 @@ class GameState {
       currentWord: clearCurrentWord ? null : (currentWord ?? this.currentWord),
       lastWord: clearLastWord ? null : (lastWord ?? this.lastWord),
       isChoosingWord: isChoosingWord ?? this.isChoosingWord,
+      offeredWords: clearOfferedWords ? null : (offeredWords ?? this.offeredWords),
+      showTurnEndOverlay: showTurnEndOverlay ?? this.showTurnEndOverlay,
     );
   }
 

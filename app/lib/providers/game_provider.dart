@@ -44,6 +44,7 @@ class GameNotifier extends Notifier<GameState?> {
       _socket.onCorrectGuess.listen(_onCorrectGuess),
       _socket.onWordHintUpdate.listen(_onWordHintUpdate),
       _socket.onDrawerChoosing.listen(_onDrawerChoosing),
+      _socket.onWordChoices.listen(_onWordChoices),
     ]);
   }
 
@@ -186,6 +187,8 @@ class GameNotifier extends Notifier<GameState?> {
     state = current.copyWith(
       status: GameStatus.playing,
       isChoosingWord: false,
+      showTurnEndOverlay: false,
+      clearOfferedWords: true,
       currentRound: round,
       currentDrawerNickname: drawerNickname,
       wordLength: wordLen,
@@ -205,6 +208,19 @@ class GameNotifier extends Notifier<GameState?> {
         );
   }
 
+  void _onWordChoices(Map<String, dynamic> data) {
+    final current = state;
+    if (current == null) return;
+    final rawWords = data['words'] as List<dynamic>?;
+    if (rawWords == null) return;
+    final words = rawWords.map((w) => w.toString()).toList();
+    state = current.copyWith(
+      isChoosingWord: true,
+      offeredWords: words,
+      showTurnEndOverlay: false,
+    );
+  }
+
   void _onTurnEnded(Map<String, dynamic> data) {
     final current = state;
     if (current == null) return;
@@ -214,10 +230,12 @@ class GameNotifier extends Notifier<GameState?> {
     final players = rawPlayers != null ? _parsePlayers(rawPlayers) : current.players;
 
     state = current.copyWith(
-      status: GameStatus.results,
+      status: GameStatus.playing,
+      showTurnEndOverlay: true,
       lastWord: word,
       players: players,
       clearCurrentWord: true,
+      clearOfferedWords: true,
     );
 
     ref.read(chatProvider.notifier).addSystem(
@@ -302,6 +320,14 @@ class GameNotifier extends Notifier<GameState?> {
 
   void sendGuess(String text) {
     _socket.sendGuess(text);
+  }
+
+  void chooseWord(String word) {
+    _socket.chooseWord(word);
+    state = state?.copyWith(
+      isChoosingWord: false,
+      clearOfferedWords: true,
+    );
   }
 
   // ─── Helpers ───
