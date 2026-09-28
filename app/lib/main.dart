@@ -15,6 +15,7 @@ void main() {
 
 final _router = GoRouter(
   initialLocation: '/',
+  errorBuilder: (ctx, state) => const HomeScreen(),
   routes: [
     GoRoute(path: '/', builder: (ctx, state) => const HomeScreen()),
     GoRoute(path: '/lobby', builder: (ctx, state) => const LobbyScreen()),

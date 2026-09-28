@@ -7,6 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../core/constants.dart';
 import '../providers/game_provider.dart';
 import '../services/socket_service.dart';
+import '../services/session_storage.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -16,11 +17,12 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen>
-    with SingleTickerProviderStateMixin {
+  with SingleTickerProviderStateMixin {
   final _nicknameCtrl = TextEditingController();
   final _roomCodeCtrl = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   bool _isConnecting = false;
+  Map<String, String>? _savedSession;
   late final AnimationController _animCtrl;
   late final Animation<double> _floatAnim;
 
@@ -38,6 +40,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     // Pre-connect socket after the first frame renders
     WidgetsBinding.instance.addPostFrameCallback((_) {
       SocketService().connect();
+      _checkSavedSession();
     });
 
     final socket = SocketService();
@@ -69,6 +72,63 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           context.go('/lobby');
         }
       }
+    });
+
+    // Reconnection events
+    socket.onReconnectedSuccess.listen((data) {
+      if (mounted) {
+        _connectTimeoutTimer?.cancel();
+        setState(() => _isConnecting = false);
+        final status = data['status'] as String?;
+        if (status == 'playing') {
+          context.go('/game');
+        } else {
+          context.go('/lobby');
+        }
+      }
+    });
+
+    socket.onReconnectFailed.listen((msg) {
+      if (mounted) {
+        _connectTimeoutTimer?.cancel();
+        setState(() {
+          _isConnecting = false;
+          _savedSession = null;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(msg),
+            backgroundColor: AppColors.warning,
+          ),
+        );
+      }
+    });
+  }
+
+  void _checkSavedSession() async {
+    final session = await SessionStorage.getSession();
+    if (session != null && mounted) {
+      setState(() {
+        _savedSession = session;
+        if (session['nickname'] != null && session['nickname']!.isNotEmpty) {
+          _nicknameCtrl.text = session['nickname']!;
+        }
+        _isConnecting = true;
+      });
+      _startConnectingTimeout();
+      SocketService().reconnectPlayer(
+        roomCode: session['roomCode']!,
+        sessionToken: session['sessionToken']!,
+      );
+    }
+  }
+
+  void _cancelReconnection() {
+    _connectTimeoutTimer?.cancel();
+    SessionStorage.clearSession();
+    setState(() {
+      _isConnecting = false;
+      _savedSession = null;
     });
   }
 
@@ -167,6 +227,50 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   const SizedBox(height: 40),
                   _buildNicknameField(),
                   const SizedBox(height: 20),
+                  if (_savedSession != null && _isConnecting) ...[
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: AppColors.cardColor,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: AppColors.secondary),
+                      ),
+                      child: Row(
+                        children: [
+                          const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: AppColors.secondary,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'Reconectando a sala ${_savedSession!['roomCode']}...',
+                              style: GoogleFonts.nunito(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: _cancelReconnection,
+                            child: Text(
+                              'Cancelar',
+                              style: GoogleFonts.nunito(
+                                color: Colors.white70,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
                   _buildPlayButton(),
                   const SizedBox(height: 16),
                   _buildPrivateButton(),

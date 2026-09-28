@@ -49,19 +49,21 @@ function registerHandlers(io) {
         }
 
         socket.roomCode = room.code;
+        socket.sessionToken = player.sessionToken;
         socket.join(room.code);
 
         const publicRoom = room.getPublicState();
 
         // Confirm to joining socket
         socket.emit('room-joined', {
-          roomCode:    room.code,
-          isPrivate:   room.isPrivate,
-          nickname:    player.nickname,
+          roomCode:     room.code,
+          isPrivate:    room.isPrivate,
+          sessionToken: player.sessionToken,
+          nickname:     player.nickname,
           player,
-          players:     publicRoom.players,
-          totalRounds: publicRoom.totalRounds,
-          room:        publicRoom,
+          players:      publicRoom.players,
+          totalRounds:  publicRoom.totalRounds,
+          room:         publicRoom,
         });
 
         // Notify everyone else in the room
@@ -130,18 +132,20 @@ function registerHandlers(io) {
         }
 
         socket.roomCode = room.code;
+        socket.sessionToken = player.sessionToken;
         socket.join(room.code);
 
         const publicRoom = room.getPublicState();
 
         socket.emit('room-joined', {
-          roomCode:    room.code,
-          isPrivate:   true,
-          nickname:    player.nickname,
+          roomCode:     room.code,
+          isPrivate:    true,
+          sessionToken: player.sessionToken,
+          nickname:     player.nickname,
           player,
-          players:     publicRoom.players,
-          totalRounds: publicRoom.totalRounds,
-          room:        publicRoom,
+          players:      publicRoom.players,
+          totalRounds:  publicRoom.totalRounds,
+          room:         publicRoom,
         });
 
         console.log(`[Room ${room.code}] Private room created by ${nick}.`);
@@ -184,18 +188,20 @@ function registerHandlers(io) {
         }
 
         socket.roomCode = room.code;
+        socket.sessionToken = player.sessionToken;
         socket.join(room.code);
 
         const publicRoom = room.getPublicState();
 
         socket.emit('room-joined', {
-          roomCode:    room.code,
-          isPrivate:   true,
-          nickname:    player.nickname,
+          roomCode:     room.code,
+          isPrivate:    true,
+          sessionToken: player.sessionToken,
+          nickname:     player.nickname,
           player,
-          players:     publicRoom.players,
-          totalRounds: publicRoom.totalRounds,
-          room:        publicRoom,
+          players:      publicRoom.players,
+          totalRounds:  publicRoom.totalRounds,
+          room:         publicRoom,
         });
 
         socket.to(room.code).emit('player-joined', {
@@ -427,7 +433,111 @@ function registerHandlers(io) {
     });
 
     // ==================================================================
-    // DISCONNECT
+    // RECONNECT PLAYER
+    // Payload: { roomCode: string, sessionToken: string }
+    // ==================================================================
+    socket.on('reconnect-player', ({ roomCode, sessionToken } = {}) => {
+      try {
+        if (!roomCode || !sessionToken) {
+          socket.emit('reconnect-failed', { message: 'Datos de sesión incompletos.' });
+          return;
+        }
+
+        const code = roomCode.trim().toUpperCase();
+        const room = gameManager.getRoom(code);
+
+        if (!room) {
+          socket.emit('reconnect-failed', { message: 'La sala ya no existe o terminó.' });
+          return;
+        }
+
+        const reconnectedPlayer = room.reconnectPlayer(socket.id, sessionToken);
+        if (!reconnectedPlayer) {
+          socket.emit('reconnect-failed', { message: 'Sesión no válida o expirada.' });
+          return;
+        }
+
+        socket.roomCode = room.code;
+        socket.sessionToken = sessionToken;
+        socket.join(room.code);
+
+        const publicRoom = room.getPublicState();
+        const isDrawing = room.currentDrawerId === socket.id;
+
+        socket.emit('reconnected-success', {
+          roomCode:               room.code,
+          isPrivate:              room.isPrivate,
+          sessionToken,
+          status:                 room.status,
+          nickname:               reconnectedPlayer.nickname,
+          player:                 reconnectedPlayer,
+          players:                publicRoom.players,
+          currentRound:           room.currentRound,
+          totalRounds:            room.totalRounds,
+          currentDrawerId:        room.currentDrawerId,
+          currentDrawerNickname:  room.players.get(room.currentDrawerId)?.nickname || 'Dibujante',
+          isDrawing,
+          isSelectingWord:        room.isSelectingWord,
+          offeredWords:           isDrawing && room.isSelectingWord ? room.offeredWords : null,
+          currentWord:            isDrawing ? room.currentWord : null,
+          wordHint:               room.currentWordHint,
+          wordLength:             room.currentWord ? room.currentWord.length : 0,
+          hasGuessed:             room.correctGuessers.has(socket.id),
+          timeLeft:               room._getTimeLeft(),
+          currentStrokes:         room.currentStrokes || [],
+        });
+
+        // Notify other players in the room
+        socket.to(room.code).emit('player-reconnected', {
+          socketId: socket.id,
+          nickname: reconnectedPlayer.nickname,
+          players:  publicRoom.players,
+        });
+
+        console.log(`[Room ${room.code}] ${reconnectedPlayer.nickname} reconnected with socket ${socket.id}.`);
+      } catch (err) {
+        console.error('[reconnect-player] Error:', err);
+        socket.emit('reconnect-failed', { message: 'Error interno al reconectar.' });
+      }
+    });
+
+    // ==================================================================
+    // LEAVE ROOM (explicit user exit)
+    // ==================================================================
+    socket.on('leave-room', () => {
+      try {
+        const room = getMyRoom();
+        if (!room) return;
+
+        const player = room.players.get(socket.id);
+        const nickname = player ? player.nickname : 'Jugador';
+        const sessionToken = room.socketToToken.get(socket.id);
+
+        const isEmpty = sessionToken
+          ? room.permanentlyRemoveSession(sessionToken)
+          : room.removePlayer(socket.id);
+
+        socket.leave(room.code);
+        delete socket.roomCode;
+        delete socket.sessionToken;
+
+        if (isEmpty) {
+          gameManager.removeRoom(room.code);
+          return;
+        }
+
+        io.to(room.code).emit('player-left', {
+          socketId: socket.id,
+          nickname,
+          players:  room.getPublicState().players,
+        });
+      } catch (err) {
+        console.error('[leave-room] Error:', err);
+      }
+    });
+
+    // ==================================================================
+    // DISCONNECT (with 25s grace period)
     // ==================================================================
     socket.on('disconnect', (reason) => {
       console.log(`[Socket] Disconnected: ${socket.id} (${reason})`);
@@ -436,48 +546,39 @@ function registerHandlers(io) {
         const room = getMyRoom();
         if (!room) return;
 
-        const player      = room.players.get(socket.id);
-        const nickname    = player ? player.nickname : 'Jugador desconocido';
-        const wasDrawing  = room.currentDrawerId === socket.id;
-        const wasPlaying  = room.status === 'playing';
+        const player = room.players.get(socket.id);
+        const nickname = player ? player.nickname : 'Jugador desconocido';
 
-        const isEmpty = room.removePlayer(socket.id);
-
-        if (isEmpty) {
-          gameManager.removeRoom(room.code);
-          return;
-        }
-
-        // Notify remaining players
-        io.to(room.code).emit('player-left', {
+        // Notify room that player disconnected temporarily
+        io.to(room.code).emit('player-disconnected-temp', {
           socketId: socket.id,
           nickname,
-          players:  room.getPublicState().players,
+          graceSeconds: 25,
         });
 
-        // If the game is running and the drawer left, skip to the next turn
-        if (wasPlaying && wasDrawing) {
-          console.log(`[Room ${room.code}] Drawer left — skipping turn.`);
-          io.to(room.code).emit('chat-message', {
-            type:     'system',
-            nickname: 'Sistema',
-            text:     `${nickname} (dibujante) se fue. Saltando turno...`,
-          });
-          // Give clients a moment to process the leave before starting next turn
-          setTimeout(() => {
-            if (room.status === 'playing') {
-              room._endTurn(false); // treat it as a missed turn
-            }
-          }, 2000);
-        }
+        // Start grace period in room
+        room.startDisconnectGrace(socket.id, (isEmpty, removedPlayer) => {
+          if (isEmpty) {
+            console.log(`[Room ${room.code}] Room is empty after grace period. Removing room.`);
+            gameManager.removeRoom(room.code);
+            return;
+          }
 
-        // If in waiting lobby and there's only 1 player left, cancel ready state
-        if (room.status === 'waiting') {
-          for (const p of room.players.values()) p.isReady = false;
-          io.to(room.code).emit('player-ready-update', {
-            players: room.getPublicState().players,
+          // Notify room of permanent departure
+          io.to(room.code).emit('player-left', {
+            socketId: socket.id,
+            nickname: removedPlayer ? removedPlayer.nickname : nickname,
+            players:  room.getPublicState().players,
           });
-        }
+
+          // If in waiting lobby and only 1 player remains, reset ready
+          if (room.status === 'waiting') {
+            for (const p of room.players.values()) p.isReady = false;
+            io.to(room.code).emit('player-ready-update', {
+              players: room.getPublicState().players,
+            });
+          }
+        });
       } catch (err) {
         console.error('[disconnect] Error:', err);
       }

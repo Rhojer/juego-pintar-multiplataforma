@@ -9,6 +9,7 @@ import '../models/game_state.dart';
 import '../models/player.dart';
 import '../providers/game_provider.dart';
 import '../services/socket_service.dart';
+import '../services/session_storage.dart';
 import '../widgets/player_avatar.dart';
 
 class LobbyScreen extends ConsumerStatefulWidget {
@@ -32,6 +33,27 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
     _turnStartedSub = SocketService().onTurnStarted.listen((_) {
       if (mounted) context.go('/game');
     });
+    _checkSessionOrRedirect();
+  }
+
+  void _checkSessionOrRedirect() async {
+    final current = ref.read(gameProvider);
+    if (current != null) return;
+
+    final session = await SessionStorage.getSession();
+    if (session != null && mounted) {
+      SocketService().reconnectPlayer(
+        roomCode: session['roomCode']!,
+        sessionToken: session['sessionToken']!,
+      );
+      Future.delayed(const Duration(seconds: 4), () {
+        if (mounted && ref.read(gameProvider) == null) {
+          context.go('/');
+        }
+      });
+    } else {
+      if (mounted) context.go('/');
+    }
   }
 
   @override
@@ -77,8 +99,32 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
     final gameState = ref.watch(gameProvider);
 
     if (gameState == null) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircularProgressIndicator(color: AppColors.secondary),
+              const SizedBox(height: 16),
+              Text(
+                'Conectando a la sala...',
+                style: GoogleFonts.nunito(color: Colors.white70, fontSize: 16),
+              ),
+              const SizedBox(height: 12),
+              TextButton(
+                onPressed: () {
+                  SessionStorage.clearSession();
+                  context.go('/');
+                },
+                child: Text(
+                  'Volver al inicio',
+                  style: GoogleFonts.nunito(color: AppColors.primary),
+                ),
+              ),
+            ],
+          ),
+        ),
       );
     }
 
