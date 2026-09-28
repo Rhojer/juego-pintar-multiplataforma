@@ -45,10 +45,73 @@ class GameNotifier extends Notifier<GameState?> {
       _socket.onWordHintUpdate.listen(_onWordHintUpdate),
       _socket.onDrawerChoosing.listen(_onDrawerChoosing),
       _socket.onWordChoices.listen(_onWordChoices),
+      _socket.onReconnectedSuccess.listen(_onReconnectedSuccess),
+      _socket.onReconnectFailed.listen((_) => state = null),
     ]);
   }
 
   // ─── Event Handlers ───
+
+  void _onReconnectedSuccess(Map<String, dynamic> data) {
+    final rawPlayers = data['players'];
+    final players = _parsePlayers(rawPlayers);
+    final roomCode = data['roomCode'] as String? ?? '';
+    final isPrivate = data['isPrivate'] as bool? ?? false;
+    final totalRounds = (data['totalRounds'] as num?)?.toInt() ?? 3;
+    final currentRound = (data['currentRound'] as num?)?.toInt() ?? 1;
+    final statusStr = data['status'] as String?;
+    final gameStatus = statusStr == 'playing' ? GameStatus.playing : GameStatus.waiting;
+    final myPlayer = data['player'] is Map ? Map<String, dynamic>.from(data['player'] as Map) : null;
+    final myId = myPlayer?['id'] as String? ?? _socket.socketId;
+    final nickname = data['nickname'] as String? ?? myPlayer?['nickname'] as String? ?? '';
+    final isDrawing = data['isDrawing'] as bool? ?? false;
+    final isSelectingWord = data['isSelectingWord'] as bool? ?? false;
+    final currentWord = data['currentWord'] as String?;
+    final wordHint = data['wordHint'] as String?;
+    final wordLength = (data['wordLength'] as num?)?.toInt() ?? (currentWord?.length ?? 0);
+    final drawerNickname = data['currentDrawerNickname'] as String?;
+    final drawerId = data['currentDrawerId'] as String?;
+    final timeLeft = (data['timeLeft'] as num?)?.toInt() ?? 80;
+
+    List<String>? offeredWords;
+    if (data['offeredWords'] is List) {
+      offeredWords = (data['offeredWords'] as List).map((e) => e.toString()).toList();
+    }
+
+    state = GameState(
+      roomCode: roomCode,
+      isPrivate: isPrivate,
+      myId: myId,
+      myNickname: nickname,
+      players: players,
+      status: gameStatus,
+      currentRound: currentRound,
+      totalRounds: totalRounds,
+      currentDrawerId: drawerId,
+      currentDrawerNickname: drawerNickname,
+      currentWord: currentWord,
+      wordHint: wordHint,
+      wordLength: wordLength,
+      amIDrawing: isDrawing,
+      isChoosingWord: isSelectingWord,
+      offeredWords: offeredWords,
+      showTurnEndOverlay: false,
+    );
+
+    // Restore timer
+    ref.read(timerProvider.notifier).state = timeLeft;
+
+    // Restore canvas strokes
+    if (data['currentStrokes'] is List) {
+      final rawStrokes = data['currentStrokes'] as List;
+      final strokes = rawStrokes
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .toList();
+      ref.read(drawingProvider.notifier).setStrokes(strokes);
+    }
+
+    ref.read(chatProvider.notifier).addSystem('¡Te has reconectado a la partida!');
+  }
 
   void _onRoomJoined(Map<String, dynamic> data) {
     final roomMap = data['room'] is Map ? Map<String, dynamic>.from(data['room'] as Map) : null;
@@ -330,6 +393,15 @@ class GameNotifier extends Notifier<GameState?> {
     );
   }
 
+  void leaveRoom() {
+    _socket.leaveRoom();
+    state = null;
+  }
+
+  void reconnectPlayer({required String roomCode, required String sessionToken}) {
+    _socket.reconnectPlayer(roomCode: roomCode, sessionToken: sessionToken);
+  }
+
   // ─── Helpers ───
 
   List<Player> _parsePlayers(dynamic raw) {
@@ -497,6 +569,11 @@ class DrawingNotifier extends StateNotifier<DrawingState> {
 
   void clear() {
     state = const DrawingState();
+    _pointBuffer.clear();
+  }
+
+  void setStrokes(List<Map<String, dynamic>> strokes) {
+    state = DrawingState(strokes: strokes);
     _pointBuffer.clear();
   }
 

@@ -8,6 +8,7 @@ import '../core/constants.dart';
 import '../models/game_state.dart';
 import '../providers/game_provider.dart';
 import '../services/socket_service.dart';
+import '../services/session_storage.dart';
 import '../widgets/chat_message_widget.dart';
 import '../widgets/player_avatar.dart';
 
@@ -43,6 +44,27 @@ class _GameScreenState extends ConsumerState<GameScreen> {
         setState(() => _guessedCorrectly = false);
       }
     });
+    _checkSessionOrRedirect();
+  }
+
+  void _checkSessionOrRedirect() async {
+    final current = ref.read(gameProvider);
+    if (current != null) return;
+
+    final session = await SessionStorage.getSession();
+    if (session != null && mounted) {
+      SocketService().reconnectPlayer(
+        roomCode: session['roomCode']!,
+        sessionToken: session['sessionToken']!,
+      );
+      Future.delayed(const Duration(seconds: 4), () {
+        if (mounted && ref.read(gameProvider) == null) {
+          context.go('/');
+        }
+      });
+    } else {
+      if (mounted) context.go('/');
+    }
   }
 
   @override
@@ -75,7 +97,33 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     final isLandscape = MediaQuery.of(context).size.aspectRatio > 1;
 
     if (gameState == null) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircularProgressIndicator(color: AppColors.secondary),
+              const SizedBox(height: 16),
+              Text(
+                'Reconectando a la partida...',
+                style: GoogleFonts.nunito(color: Colors.white70, fontSize: 16),
+              ),
+              const SizedBox(height: 12),
+              TextButton(
+                onPressed: () {
+                  SessionStorage.clearSession();
+                  context.go('/');
+                },
+                child: Text(
+                  'Volver al inicio',
+                  style: GoogleFonts.nunito(color: AppColors.primary),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
     }
 
     final showWordChoices = gameState.amIDrawing &&

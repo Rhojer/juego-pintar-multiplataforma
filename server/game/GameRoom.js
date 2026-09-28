@@ -4,6 +4,7 @@
  * emits Socket.io events directly to the room channel.
  */
 
+const crypto = require('crypto');
 const { getAllWords, pickRandomWord, pickThreeWords } = require('./words');
 
 // ---------------------------------------------------------------------------
@@ -128,6 +129,15 @@ class GameRoom {
     this._io               = null;
 
     this._hintRevealCount  = 0;     // how many hint letters revealed so far
+
+    /** @type {Map<string, Object>} sessionToken -> player */
+    this.sessions          = new Map();
+
+    /** @type {Map<string, string>} socketId -> sessionToken */
+    this.socketToToken     = new Map();
+
+    /** @type {Map<string, NodeJS.Timeout>} sessionToken -> disconnect timeout */
+    this.disconnectTimeouts = new Map();
   }
 
   // -------------------------------------------------------------------------
@@ -138,21 +148,26 @@ class GameRoom {
    * Adds a player to the room.
    * @param {string} socketId
    * @param {string} nickname
-   * @returns {{ id: string, nickname: string, score: number, isReady: boolean, isDrawing: boolean }|null}
-   *          null if room is full or game already in progress
+   * @returns {{ id: string, sessionToken: string, nickname: string, score: number, isReady: boolean, isDrawing: boolean }|null}
+   *          null if room is full
    */
   addPlayer(socketId, nickname) {
     if (this.players.size >= MAX_PLAYERS) return null;
 
+    const sessionToken = crypto.randomUUID();
     const player = {
-      id:        socketId,
-      nickname:  nickname.trim().substring(0, 20) || `Jugador${this.players.size + 1}`,
-      score:     0,
-      isReady:   this.status === 'playing',
-      isDrawing: false,
+      id:           socketId,
+      sessionToken,
+      nickname:     nickname.trim().substring(0, 20) || `Jugador${this.players.size + 1}`,
+      score:        0,
+      isReady:      this.status === 'playing',
+      isDrawing:    false,
+      disconnected: false,
     };
 
     this.players.set(socketId, player);
+    this.sessions.set(sessionToken, player);
+    this.socketToToken.set(socketId, sessionToken);
 
     // If game is in progress, add to draw order so they also get turns
     if (this.status === 'playing') {
@@ -165,15 +180,139 @@ class GameRoom {
   }
 
   /**
-   * Removes a player from the room.
+   * Starts a 25-second grace period when a socket disconnects.
+   * @param {string} socketId
+   * @param {Function} onPermanentlyRemoved (isEmpty, removedPlayer) => void
+   */
+  startDisconnectGrace(socketId, onPermanentlyRemoved) {
+    const sessionToken = this.socketToToken.get(socketId);
+    if (!sessionToken) {
+      const isEmpty = this.removePlayer(socketId);
+      if (onPermanentlyRemoved) onPermanentlyRemoved(isEmpty, null);
+      return;
+    }
+
+    const player = this.sessions.get(sessionToken);
+    if (!player) return;
+
+    player.disconnected = true;
+
+    // Clear any existing timer for this token
+    if (this.disconnectTimeouts.has(sessionToken)) {
+      clearTimeout(this.disconnectTimeouts.get(sessionToken));
+    }
+
+    console.log(`[Room ${this.code}] Player ${player.nickname} disconnected. Starting 25s grace period.`);
+
+    const timeout = setTimeout(() => {
+      this.disconnectTimeouts.delete(sessionToken);
+      console.log(`[Room ${this.code}] Grace period expired for ${player.nickname}. Permanently removing.`);
+      const isEmpty = this.permanentlyRemoveSession(sessionToken);
+      if (onPermanentlyRemoved) {
+        onPermanentlyRemoved(isEmpty, player);
+      }
+    }, 25000);
+
+    this.disconnectTimeouts.set(sessionToken, timeout);
+  }
+
+  /**
+   * Reconnects an existing player with a new socket ID.
+   * @param {string} newSocketId
+   * @param {string} sessionToken
+   * @returns {Object|null} player or null if not found
+   */
+  reconnectPlayer(newSocketId, sessionToken) {
+    const player = this.sessions.get(sessionToken);
+    if (!player) return null;
+
+    // Cancel grace timeout
+    if (this.disconnectTimeouts.has(sessionToken)) {
+      clearTimeout(this.disconnectTimeouts.get(sessionToken));
+      this.disconnectTimeouts.delete(sessionToken);
+    }
+
+    const oldSocketId = player.id;
+
+    // Update socket mappings
+    this.players.delete(oldSocketId);
+    this.socketToToken.delete(oldSocketId);
+
+    player.id = newSocketId;
+    player.disconnected = false;
+
+    this.players.set(newSocketId, player);
+    this.socketToToken.set(newSocketId, sessionToken);
+
+    // Update drawOrder
+    this.drawOrder = this.drawOrder.map((id) => (id === oldSocketId ? newSocketId : id));
+
+    // Update current drawer if this player was drawing
+    if (this.currentDrawerId === oldSocketId) {
+      this.currentDrawerId = newSocketId;
+    }
+
+    // Update correctGuessers
+    if (this.correctGuessers.has(oldSocketId)) {
+      this.correctGuessers.delete(oldSocketId);
+      this.correctGuessers.add(newSocketId);
+    }
+
+    // Update turnPointsGained
+    if (this.turnPointsGained.has(oldSocketId)) {
+      const pts = this.turnPointsGained.get(oldSocketId);
+      this.turnPointsGained.delete(oldSocketId);
+      this.turnPointsGained.set(newSocketId, pts);
+    }
+
+    console.log(`[Room ${this.code}] Player ${player.nickname} reconnected successfully! (new socket: ${newSocketId})`);
+    return player;
+  }
+
+  /**
+   * Permanently removes a player session.
+   * @param {string} sessionToken
+   * @returns {boolean} true if the room is now empty
+   */
+  permanentlyRemoveSession(sessionToken) {
+    if (this.disconnectTimeouts.has(sessionToken)) {
+      clearTimeout(this.disconnectTimeouts.get(sessionToken));
+      this.disconnectTimeouts.delete(sessionToken);
+    }
+
+    const player = this.sessions.get(sessionToken);
+    if (!player) return this.players.size === 0;
+
+    const socketId = player.id;
+    this.players.delete(socketId);
+    this.sessions.delete(sessionToken);
+    this.socketToToken.delete(socketId);
+    this.correctGuessers.delete(socketId);
+    this.turnPointsGained.delete(socketId);
+    this.drawOrder = this.drawOrder.filter((id) => id !== socketId);
+
+    // If the drawer left permanently during playing, skip turn
+    if (this.status === 'playing' && this.currentDrawerId === socketId) {
+      this._endTurn(false);
+    }
+
+    return this.players.size === 0;
+  }
+
+  /**
+   * Removes a player from the room by socketId.
    * @param {string} socketId
    * @returns {boolean} true if the room is now empty
    */
   removePlayer(socketId) {
+    const sessionToken = this.socketToToken.get(socketId);
+    if (sessionToken) {
+      return this.permanentlyRemoveSession(sessionToken);
+    }
+
     this.players.delete(socketId);
     this.correctGuessers.delete(socketId);
-
-    // Remove from draw order if present
+    this.turnPointsGained.delete(socketId);
     this.drawOrder = this.drawOrder.filter((id) => id !== socketId);
 
     return this.players.size === 0;
@@ -234,8 +373,9 @@ class GameRoom {
         id:        p.id,
         nickname:  p.nickname,
         score:     p.score,
-        isReady:   p.isReady,
-        isDrawing: p.isDrawing,
+        isReady:      p.isReady,
+        isDrawing:    p.isDrawing,
+        disconnected: p.disconnected || false,
       })),
     };
   }

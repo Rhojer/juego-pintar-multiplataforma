@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import '../core/constants.dart';
+import 'session_storage.dart';
 
 /// Singleton service that manages the Socket.IO connection and exposes
 /// strongly-typed event streams to the rest of the app.
@@ -37,6 +38,8 @@ class SocketService {
   final _playerReadyCtrl = StreamController<Map<String, dynamic>>.broadcast();
   final _chooseWordCtrl = StreamController<Map<String, dynamic>>.broadcast();
   final _drawerChoosingCtrl = StreamController<Map<String, dynamic>>.broadcast();
+  final _reconnectedSuccessCtrl = StreamController<Map<String, dynamic>>.broadcast();
+  final _reconnectFailedCtrl = StreamController<String>.broadcast();
 
   // ──────────────────────────── Public Streams ────────────────────────────
 
@@ -57,6 +60,8 @@ class SocketService {
   Stream<Map<String, dynamic>> get onPlayerReady => _playerReadyCtrl.stream;
   Stream<Map<String, dynamic>> get onWordChoices => _chooseWordCtrl.stream;
   Stream<Map<String, dynamic>> get onDrawerChoosing => _drawerChoosingCtrl.stream;
+  Stream<Map<String, dynamic>> get onReconnectedSuccess => _reconnectedSuccessCtrl.stream;
+  Stream<String> get onReconnectFailed => _reconnectFailedCtrl.stream;
 
   // ──────────────────────────── Connect / Disconnect ────────────────────────────
 
@@ -115,7 +120,42 @@ class SocketService {
 
     // ── Room events ──
     _socket!.on('room-joined', (data) {
-      _roomJoinedCtrl.add(_toMap(data));
+      final map = _toMap(data);
+      final roomCode = map['roomCode'] as String? ?? '';
+      final playerMap = map['player'] is Map ? map['player'] as Map : null;
+      final sessionToken = (map['sessionToken'] ?? playerMap?['sessionToken']) as String? ?? '';
+      final nickname = (map['nickname'] ?? playerMap?['nickname']) as String? ?? '';
+
+      if (roomCode.isNotEmpty && sessionToken.isNotEmpty) {
+        SessionStorage.saveSession(
+          roomCode: roomCode,
+          sessionToken: sessionToken,
+          nickname: nickname,
+        );
+      }
+      _roomJoinedCtrl.add(map);
+    });
+
+    _socket!.on('reconnected-success', (data) {
+      final map = _toMap(data);
+      final roomCode = map['roomCode'] as String? ?? '';
+      final sessionToken = map['sessionToken'] as String? ?? '';
+      final nickname = map['nickname'] as String? ?? '';
+
+      if (roomCode.isNotEmpty && sessionToken.isNotEmpty) {
+        SessionStorage.saveSession(
+          roomCode: roomCode,
+          sessionToken: sessionToken,
+          nickname: nickname,
+        );
+      }
+      _reconnectedSuccessCtrl.add(map);
+    });
+
+    _socket!.on('reconnect-failed', (data) {
+      final msg = data is Map ? data['message'] as String? : data.toString();
+      SessionStorage.clearSession();
+      _reconnectFailedCtrl.add(msg ?? 'Sesión expirada o no encontrada.');
     });
 
     _socket!.on('player-joined', (data) {
@@ -153,10 +193,12 @@ class SocketService {
     });
 
     _socket!.on('game-ended', (data) {
+      SessionStorage.clearSession();
       _gameEndedCtrl.add(_toMap(data));
     });
 
     _socket!.on('game-over', (data) {
+      SessionStorage.clearSession();
       _gameEndedCtrl.add(_toMap(data));
     });
 
@@ -261,6 +303,22 @@ class SocketService {
     });
   }
 
+  /// Attempt to reconnect to an existing room session
+  void reconnectPlayer({required String roomCode, required String sessionToken}) {
+    _ensureConnected(() {
+      _socket?.emit('reconnect-player', {
+        'roomCode': roomCode,
+        'sessionToken': sessionToken,
+      });
+    });
+  }
+
+  /// Explicitly leaves the room and clears local session
+  void leaveRoom() {
+    _socket?.emit('leave-room');
+    SessionStorage.clearSession();
+  }
+
   // ──────────────────────────── Helpers ────────────────────────────
 
   Map<String, dynamic> _toMap(dynamic data) {
@@ -288,5 +346,7 @@ class SocketService {
     _playerReadyCtrl.close();
     _chooseWordCtrl.close();
     _drawerChoosingCtrl.close();
+    _reconnectedSuccessCtrl.close();
+    _reconnectFailedCtrl.close();
   }
 }

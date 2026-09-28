@@ -88,6 +88,11 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen>
   Widget build(BuildContext context) {
     final gameState = ref.watch(gameProvider);
     if (gameState == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && ref.read(gameProvider) == null) {
+          context.go('/');
+        }
+      });
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
