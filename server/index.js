@@ -55,17 +55,46 @@ app.get('/admin/rooms', (req, res) => {
 // ---------------------------------------------------------------------------
 const httpServer = http.createServer(app);
 
+// Optimize keep-alive timeouts for high-throughput load balancers (Nginx / ALB)
+httpServer.keepAliveTimeout = 65000;
+httpServer.headersTimeout = 66000;
+
 const io = new Server(httpServer, {
   cors: {
     origin:  '*',
     methods: ['GET', 'POST'],
   },
+  // Scale optimizations:
+  // Disabling perMessageDeflate saves huge CPU cycles at high concurrency
+  perMessageDeflate: false,
+  // Limit max packet size to 1MB to prevent memory exhaustion DoS
+  maxHttpBufferSize: 1e6,
   // Tune transports: prefer WebSocket, fall back to polling for restrictive networks
   transports: ['websocket', 'polling'],
-  // Ping settings to detect dead connections quickly
-  pingTimeout:  20000, // ms to wait for pong before declaring connection dead
-  pingInterval: 10000, // ms between server-initiated pings
+  // Ping settings to detect dead connections quickly and reclaim resources
+  pingTimeout:  20000,
+  pingInterval: 10000,
 });
+
+// Optional Redis Adapter for multi-node / multi-core horizontal clustering
+if (process.env.REDIS_URL || process.env.REDIS_HOST) {
+  try {
+    const { createAdapter } = require('@socket.io/redis-adapter');
+    const { createClient } = require('redis');
+    const redisUrl = process.env.REDIS_URL || `redis://${process.env.REDIS_HOST}:${process.env.REDIS_PORT || 6379}`;
+    const pubClient = createClient({ url: redisUrl });
+    const subClient = pubClient.duplicate();
+
+    Promise.all([pubClient.connect(), subClient.connect()]).then(() => {
+      io.adapter(createAdapter(pubClient, subClient));
+      console.log('[Server] 🚀 Socket.io Redis adapter active for horizontal multi-core/multi-server scaling!');
+    }).catch((err) => {
+      console.warn('[Server] Redis connection failed, falling back to in-memory mode:', err.message);
+    });
+  } catch (err) {
+    console.log('[Server] Redis adapter packages not installed, running in high-performance in-memory mode.');
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Register all game event handlers

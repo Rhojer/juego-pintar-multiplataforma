@@ -1006,6 +1006,7 @@ class _PlayerScoreStrip extends StatelessWidget {
             padding: const EdgeInsets.only(right: 8),
             child: PlayerAvatar(
               nickname: p.nickname,
+              avatar: p.avatar,
               size: 36,
               score: p.score,
               isMe: p.id == myId,

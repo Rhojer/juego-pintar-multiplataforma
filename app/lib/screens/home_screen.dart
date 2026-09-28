@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../core/constants.dart';
+import '../models/vzla_avatar.dart';
 import '../providers/game_provider.dart';
 import '../services/socket_service.dart';
 import '../services/session_storage.dart';
@@ -23,6 +24,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   final _formKey = GlobalKey<FormState>();
   bool _isConnecting = false;
   Map<String, String>? _savedSession;
+  String _selectedAvatar = 'arepa';
   late final AnimationController _animCtrl;
   late final Animation<double> _floatAnim;
 
@@ -106,12 +108,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   }
 
   void _checkSavedSession() async {
+    final savedAvatar = await SessionStorage.getAvatar();
+    if (mounted) {
+      setState(() => _selectedAvatar = savedAvatar);
+    }
+
     final session = await SessionStorage.getSession();
     if (session != null && mounted) {
       setState(() {
         _savedSession = session;
         if (session['nickname'] != null && session['nickname']!.isNotEmpty) {
           _nicknameCtrl.text = session['nickname']!;
+        }
+        if (session['avatar'] != null && session['avatar']!.isNotEmpty) {
+          _selectedAvatar = session['avatar']!;
         }
         _isConnecting = true;
       });
@@ -171,7 +181,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     if (!(_formKey.currentState?.validate() ?? false)) return;
     setState(() => _isConnecting = true);
     _startConnectingTimeout();
-    ref.read(gameProvider.notifier).joinPublic(_nicknameCtrl.text.trim());
+    ref.read(gameProvider.notifier).joinPublic(
+      _nicknameCtrl.text.trim(),
+      avatar: _selectedAvatar,
+    );
   }
 
   void _showPrivateSheet() {
@@ -184,6 +197,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       ),
       builder: (ctx) => _PrivateRoomSheet(
         nickname: _nicknameCtrl.text.trim(),
+        avatar: _selectedAvatar,
         onConnecting: () {
           setState(() => _isConnecting = true);
           _startConnectingTimeout();
@@ -222,9 +236,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     ),
                     textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 48),
-                  _buildPaletteDecoration(),
-                  const SizedBox(height: 40),
+                  const SizedBox(height: 36),
+                  _buildAvatarSelector(),
+                  const SizedBox(height: 32),
                   _buildNicknameField(),
                   const SizedBox(height: 20),
                   if (_savedSession != null && _isConnecting) ...[
@@ -311,21 +325,107 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     );
   }
 
-  Widget _buildPaletteDecoration() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: AppColors.drawingColors.take(8).map((c) {
-        return Container(
-          width: 28,
-          height: 28,
-          margin: const EdgeInsets.symmetric(horizontal: 3),
-          decoration: BoxDecoration(
-            color: c,
-            shape: BoxShape.circle,
-            border: Border.all(color: Colors.white24, width: 1),
+  Widget _buildAvatarSelector() {
+    final currentAvatar = VzlaAvatars.getById(_selectedAvatar);
+
+    return Column(
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              'Tu avatar: ',
+              style: GoogleFonts.nunito(
+                color: Colors.white70,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: currentAvatar.color.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: currentAvatar.color, width: 1.5),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(currentAvatar.emoji, style: const TextStyle(fontSize: 16)),
+                  const SizedBox(width: 6),
+                  Text(
+                    currentAvatar.name,
+                    style: GoogleFonts.nunito(
+                      color: Colors.white,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 62,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            itemCount: VzlaAvatars.all.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 10),
+            itemBuilder: (ctx, i) {
+              final av = VzlaAvatars.all[i];
+              final isSelected = av.id == _selectedAvatar;
+              return GestureDetector(
+                onTap: () {
+                  setState(() => _selectedAvatar = av.id);
+                  SessionStorage.saveAvatar(av.id);
+                },
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  width: isSelected ? 56 : 46,
+                  height: isSelected ? 56 : 46,
+                  decoration: BoxDecoration(
+                    color: av.color,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: isSelected ? Colors.white : Colors.white30,
+                      width: isSelected ? 3 : 1.5,
+                    ),
+                    boxShadow: isSelected
+                        ? [
+                            BoxShadow(
+                              color: av.color.withOpacity(0.7),
+                              blurRadius: 12,
+                              spreadRadius: 2,
+                            ),
+                          ]
+                        : null,
+                  ),
+                  child: Center(
+                    child: Text(
+                      av.emoji,
+                      style: TextStyle(
+                        fontSize: isSelected ? 26 : 22,
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
           ),
-        );
-      }).toList(),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          currentAvatar.subtitle,
+          style: GoogleFonts.nunito(
+            color: Colors.white54,
+            fontSize: 12,
+            fontStyle: FontStyle.italic,
+          ),
+        ),
+      ],
     );
   }
 
@@ -407,10 +507,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 class _PrivateRoomSheet extends ConsumerStatefulWidget {
   const _PrivateRoomSheet({
     required this.nickname,
+    this.avatar = 'arepa',
     required this.onConnecting,
   });
 
   final String nickname;
+  final String avatar;
   final VoidCallback onConnecting;
 
   @override
@@ -428,7 +530,10 @@ class _PrivateRoomSheetState extends ConsumerState<_PrivateRoomSheet> {
 
   void _createRoom() {
     widget.onConnecting();
-    ref.read(gameProvider.notifier).createPrivate(widget.nickname);
+    ref.read(gameProvider.notifier).createPrivate(
+          widget.nickname,
+          avatar: widget.avatar,
+        );
     Navigator.of(context).pop();
   }
 
@@ -441,7 +546,11 @@ class _PrivateRoomSheetState extends ConsumerState<_PrivateRoomSheet> {
       return;
     }
     widget.onConnecting();
-    ref.read(gameProvider.notifier).joinPrivate(widget.nickname, code);
+    ref.read(gameProvider.notifier).joinPrivate(
+          widget.nickname,
+          code,
+          avatar: widget.avatar,
+        );
     Navigator.of(context).pop();
   }
 

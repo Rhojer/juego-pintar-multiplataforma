@@ -6,6 +6,7 @@ class Player {
   const Player({
     required this.id,
     required this.nickname,
+    this.avatar = 'arepa',
     this.score = 0,
     this.isReady = false,
     this.isDrawing = false,
@@ -15,6 +16,7 @@ class Player {
 
   final String id;
   final String nickname;
+  final String avatar;
   final int score;
   final bool isReady;
   final bool isDrawing;
@@ -26,6 +28,7 @@ class Player {
     return Player(
       id: json['id'] as String,
       nickname: json['nickname'] as String,
+      avatar: json['avatar'] as String? ?? 'arepa',
       score: (json['score'] as num?)?.toInt() ?? 0,
       isReady: json['isReady'] as bool? ?? false,
       isDrawing: json['isDrawing'] as bool? ?? false,
@@ -38,6 +41,7 @@ class Player {
   Map<String, dynamic> toJson() => {
         'id': id,
         'nickname': nickname,
+        'avatar': avatar,
         'score': score,
         'isReady': isReady,
         'isDrawing': isDrawing,
@@ -49,6 +53,7 @@ class Player {
   Player copyWith({
     String? id,
     String? nickname,
+    String? avatar,
     int? score,
     bool? isReady,
     bool? isDrawing,
@@ -58,6 +63,7 @@ class Player {
     return Player(
       id: id ?? this.id,
       nickname: nickname ?? this.nickname,
+      avatar: avatar ?? this.avatar,
       score: score ?? this.score,
       isReady: isReady ?? this.isReady,
       isDrawing: isDrawing ?? this.isDrawing,

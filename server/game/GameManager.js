@@ -17,6 +17,31 @@ class GameManager {
      * @type {Map<string, GameRoom>}
      */
     this.rooms = new Map();
+
+    // Periodic sweep for abandoned or stale rooms (runs every 60s)
+    this._cleanupInterval = setInterval(() => {
+      this.cleanupStaleRooms();
+    }, 60000);
+    if (this._cleanupInterval.unref) {
+      this._cleanupInterval.unref();
+    }
+  }
+
+  /**
+   * Sweeps and destroys empty or long-abandoned rooms to conserve memory.
+   */
+  cleanupStaleRooms() {
+    const now = Date.now();
+    const IDLE_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes
+    for (const [code, room] of this.rooms.entries()) {
+      const isAbandoned = room.players.size === 0 && room.sessions.size === 0;
+      const isStale = (now - (room.lastActivity || now)) > IDLE_TIMEOUT_MS;
+      if (isAbandoned || isStale) {
+        console.log(`[GameManager] Purging stale room ${code}`);
+        room.destroy();
+        this.rooms.delete(code);
+      }
+    }
   }
 
   // ---------------------------------------------------------------------------

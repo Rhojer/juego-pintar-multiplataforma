@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../core/constants.dart';
+import '../models/vzla_avatar.dart';
 
-/// Circular avatar displaying the player's initial, score badge,
+/// Circular avatar displaying the player's Venezuelan avatar or initial, score badge,
 /// and optional drawing/guessed indicators.
 class PlayerAvatar extends StatelessWidget {
   const PlayerAvatar({
     super.key,
     required this.nickname,
+    this.avatar,
     required this.size,
     this.score,
     this.isMe = false,
@@ -16,6 +18,7 @@ class PlayerAvatar extends StatelessWidget {
   });
 
   final String nickname;
+  final String? avatar;
 
   /// Diameter of the avatar circle
   final double size;
@@ -45,9 +48,10 @@ class PlayerAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = _avatarColor();
+    final vzlaAvatar = avatar != null && avatar!.isNotEmpty ? VzlaAvatars.getById(avatar) : null;
+    final color = vzlaAvatar != null ? vzlaAvatar.color : _avatarColor();
+    final emoji = vzlaAvatar?.emoji;
     final initial = nickname.isNotEmpty ? nickname[0].toUpperCase() : '?';
-    final fontSize = size * 0.42;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -71,14 +75,21 @@ class PlayerAvatar extends StatelessWidget {
                     : null,
               ),
               child: Center(
-                child: Text(
-                  initial,
-                  style: GoogleFonts.nunito(
-                    color: Colors.white,
-                    fontSize: fontSize,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
+                child: emoji != null
+                    ? Text(
+                        emoji,
+                        style: TextStyle(
+                          fontSize: size * 0.52,
+                        ),
+                      )
+                    : Text(
+                        initial,
+                        style: GoogleFonts.nunito(
+                          color: Colors.white,
+                          fontSize: size * 0.42,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
               ),
             ),
             // Drawing pencil badge

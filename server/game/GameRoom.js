@@ -138,6 +138,9 @@ class GameRoom {
 
     /** @type {Map<string, NodeJS.Timeout>} sessionToken -> disconnect timeout */
     this.disconnectTimeouts = new Map();
+
+    /** @type {number} Timestamp of last user activity (for scale/cleanup) */
+    this.lastActivity      = Date.now();
   }
 
   // -------------------------------------------------------------------------
@@ -148,17 +151,20 @@ class GameRoom {
    * Adds a player to the room.
    * @param {string} socketId
    * @param {string} nickname
-   * @returns {{ id: string, sessionToken: string, nickname: string, score: number, isReady: boolean, isDrawing: boolean }|null}
+   * @param {string} [avatar='arepa']
+   * @returns {{ id: string, sessionToken: string, nickname: string, avatar: string, score: number, isReady: boolean, isDrawing: boolean }|null}
    *          null if room is full
    */
-  addPlayer(socketId, nickname) {
+  addPlayer(socketId, nickname, avatar = 'arepa') {
     if (this.players.size >= MAX_PLAYERS) return null;
 
+    this.lastActivity = Date.now();
     const sessionToken = crypto.randomUUID();
     const player = {
       id:           socketId,
       sessionToken,
       nickname:     nickname.trim().substring(0, 20) || `Jugador${this.players.size + 1}`,
+      avatar:       typeof avatar === 'string' && avatar.trim() ? avatar.trim() : 'arepa',
       score:        0,
       isReady:      this.status === 'playing',
       isDrawing:    false,
@@ -327,14 +333,20 @@ class GameRoom {
 
   /**
    * Adds strokes to turn buffer for mid-game/turn synchronization.
+   * Capped to MAX_STROKES_BUFFER to conserve memory under high concurrency.
    * @param {any} strokes
    */
   addStrokes(strokes) {
+    this.lastActivity = Date.now();
+    const MAX_STROKES_BUFFER = 500;
     if (!this.currentStrokes) this.currentStrokes = [];
     if (Array.isArray(strokes)) {
       this.currentStrokes.push(...strokes);
     } else if (strokes) {
       this.currentStrokes.push(strokes);
+    }
+    if (this.currentStrokes.length > MAX_STROKES_BUFFER) {
+      this.currentStrokes = this.currentStrokes.slice(-MAX_STROKES_BUFFER);
     }
   }
 
@@ -342,6 +354,26 @@ class GameRoom {
    * Clears the current stroke buffer.
    */
   clearStrokes() {
+    this.currentStrokes = [];
+  }
+
+  /**
+   * Cleans up all active timers and maps to avoid memory leaks.
+   */
+  destroy() {
+    clearTimeout(this.turnTimer);
+    clearInterval(this.hintTimer);
+    clearInterval(this.tickTimer);
+    clearTimeout(this.wordSelectionTimer);
+    for (const timeout of this.disconnectTimeouts.values()) {
+      clearTimeout(timeout);
+    }
+    this.disconnectTimeouts.clear();
+    this.players.clear();
+    this.sessions.clear();
+    this.socketToToken.clear();
+    this.correctGuessers.clear();
+    this.turnPointsGained.clear();
     this.currentStrokes = [];
   }
 
@@ -370,9 +402,10 @@ class GameRoom {
       wordLength:             this.currentWord ? this.currentWord.length : 0,
       timeLeft,
       players: [...this.players.values()].map((p) => ({
-        id:        p.id,
-        nickname:  p.nickname,
-        score:     p.score,
+        id:           p.id,
+        nickname:     p.nickname,
+        avatar:       p.avatar || 'arepa',
+        score:        p.score,
         isReady:      p.isReady,
         isDrawing:    p.isDrawing,
         disconnected: p.disconnected || false,
