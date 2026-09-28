@@ -43,6 +43,7 @@ class GameNotifier extends Notifier<GameState?> {
       _socket.onTimerTick.listen(_onTimerTick),
       _socket.onCorrectGuess.listen(_onCorrectGuess),
       _socket.onWordHintUpdate.listen(_onWordHintUpdate),
+      _socket.onDrawerChoosing.listen(_onDrawerChoosing),
     ]);
   }
 
@@ -61,6 +62,9 @@ class GameNotifier extends Notifier<GameState?> {
         (roomMap?['totalRounds'] as num?)?.toInt() ??
         AppConstants.maxRounds;
 
+    final statusStr = (data['status'] ?? roomMap?['status']) as String?;
+    final gameStatus = statusStr == 'playing' ? GameStatus.playing : GameStatus.waiting;
+
     state = GameState.initial(
       myId: _socket.socketId,
       myNickname: nickname,
@@ -68,6 +72,7 @@ class GameNotifier extends Notifier<GameState?> {
       roomCode: roomCode,
       isPrivate: isPrivate,
       players: players,
+      status: gameStatus,
       totalRounds: totalRounds,
     );
     // Notify chat
@@ -128,6 +133,37 @@ class GameNotifier extends Notifier<GameState?> {
     ref.read(drawingProvider.notifier).clear();
   }
 
+  void _onDrawerChoosing(Map<String, dynamic> data) {
+    final current = state;
+    if (current == null) return;
+
+    final drawerNickname = data['drawerNickname'] as String? ?? '';
+    final round = (data['currentRound'] as num?)?.toInt() ?? current.currentRound;
+    final totalRounds = (data['totalRounds'] as num?)?.toInt() ?? current.totalRounds;
+    final rawPlayers = data['players'];
+    final players = rawPlayers != null ? _parsePlayers(rawPlayers) : current.players;
+
+    final markedPlayers = players.map((p) {
+      return p.copyWith(isDrawing: p.nickname == drawerNickname, hasGuessed: false);
+    }).toList();
+
+    state = current.copyWith(
+      status: GameStatus.playing,
+      isChoosingWord: true,
+      currentRound: round,
+      totalRounds: totalRounds,
+      currentDrawerNickname: drawerNickname,
+      players: markedPlayers,
+      clearCurrentWord: true,
+    );
+
+    ref.read(chatProvider.notifier).addSystem(
+          drawerNickname == current.myNickname
+              ? '¡Te toca dibujar! Elige una palabra.'
+              : '¡$drawerNickname está eligiendo palabra!',
+        );
+  }
+
   void _onTurnStarted(Map<String, dynamic> data) {
     final current = state;
     if (current == null) return;
@@ -149,6 +185,7 @@ class GameNotifier extends Notifier<GameState?> {
 
     state = current.copyWith(
       status: GameStatus.playing,
+      isChoosingWord: false,
       currentRound: round,
       currentDrawerNickname: drawerNickname,
       wordLength: wordLen,

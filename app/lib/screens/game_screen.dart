@@ -1,5 +1,6 @@
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -21,6 +22,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   final _guessCtrl = TextEditingController();
   final _chatScrollCtrl = ScrollController();
   bool _guessedCorrectly = false;
+  bool _isWordDialogShowing = false;
 
   @override
   void initState() {
@@ -41,7 +43,44 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       }
     });
     SocketService().onTurnStarted.listen((_) {
-      setState(() => _guessedCorrectly = false);
+      if (mounted) {
+        if (_isWordDialogShowing && Navigator.canPop(context)) {
+          Navigator.of(context).pop();
+        }
+        setState(() => _guessedCorrectly = false);
+      }
+    });
+
+    // Handle 3-word choices for drawer
+    SocketService().onWordChoices.listen((data) {
+      if (!mounted) return;
+      final rawWords = data['words'] as List<dynamic>?;
+      if (rawWords == null || rawWords.isEmpty) return;
+      final words = rawWords.map((w) => w.toString()).toList();
+      _showWordSelectionDialog(words);
+    });
+  }
+
+  void _showWordSelectionDialog(List<String> words) {
+    if (_isWordDialogShowing) return;
+    _isWordDialogShowing = true;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        return _WordSelectionDialog(
+          words: words,
+          onWordChosen: (chosenWord) {
+            SocketService().chooseWord(chosenWord);
+            if (Navigator.canPop(ctx)) {
+              Navigator.of(ctx).pop();
+            }
+          },
+        );
+      },
+    ).then((_) {
+      _isWordDialogShowing = false;
     });
   }
 
@@ -217,12 +256,54 @@ class _TopBar extends ConsumerWidget {
 
     return Container(
       color: AppColors.surface,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       child: Row(
         children: [
+          // Room code badge (tap to copy)
+          if (gameState.roomCode.isNotEmpty)
+            Tooltip(
+              message: 'Toca para copiar código',
+              child: InkWell(
+                borderRadius: BorderRadius.circular(10),
+                onTap: () {
+                  Clipboard.setData(ClipboardData(text: gameState.roomCode));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('¡Código ${gameState.roomCode} copiado! Compártelo con tus panas.'),
+                      duration: const Duration(seconds: 2),
+                      backgroundColor: AppColors.primary,
+                    ),
+                  );
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                  margin: const EdgeInsets.only(right: 6),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: AppColors.primary.withOpacity(0.7), width: 1.2),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.copy_rounded, color: AppColors.primary, size: 12),
+                      const SizedBox(width: 4),
+                      Text(
+                        gameState.roomCode,
+                        style: GoogleFonts.nunito(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           // Round info
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
             decoration: BoxDecoration(
               color: AppColors.cardColor,
               borderRadius: BorderRadius.circular(10),
@@ -232,14 +313,14 @@ class _TopBar extends ConsumerWidget {
               style: GoogleFonts.nunito(
                 color: AppColors.secondary,
                 fontWeight: FontWeight.w700,
-                fontSize: 13,
+                fontSize: 12,
               ),
             ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 8),
           // Word / hint area
           Expanded(child: _WordDisplay(gameState: gameState)),
-          const SizedBox(width: 10),
+          const SizedBox(width: 8),
           // Timer
           _TimerWidget(seconds: timer, color: timerColor),
         ],
@@ -254,6 +335,53 @@ class _WordDisplay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 1. Drawer is choosing words
+    if (gameState.isChoosingWord) {
+      if (gameState.amIDrawing) {
+        return Column(
+          children: [
+            Text(
+              '¡Te toca dibujar!',
+              style: GoogleFonts.nunito(color: AppColors.secondary, fontSize: 11, fontWeight: FontWeight.bold),
+            ),
+            Text(
+              'ELIGE TU PALABRA',
+              style: GoogleFonts.nunito(
+                color: Colors.white,
+                fontSize: 15,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 1.2,
+              ),
+              textAlign: TextAlign.center,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        );
+      } else {
+        return Column(
+          children: [
+            Text(
+              'Turno de ${gameState.currentDrawerNickname}',
+              style: GoogleFonts.nunito(color: Colors.white54, fontSize: 11),
+              overflow: TextOverflow.ellipsis,
+            ),
+            Text(
+              'Eligiendo palabra...',
+              style: GoogleFonts.nunito(
+                color: AppColors.secondary,
+                fontSize: 14,
+                fontWeight: FontWeight.w800,
+                fontStyle: FontStyle.italic,
+              ),
+              textAlign: TextAlign.center,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        );
+      }
+    }
+
+    // 2. Normal drawing phase: drawer sees full word
     if (gameState.amIDrawing && gameState.currentWord != null) {
       return Column(
         children: [
@@ -276,6 +404,7 @@ class _WordDisplay extends StatelessWidget {
       );
     }
 
+    // 3. Guesser sees hint / dashes
     final hint = gameState.wordHint;
     final len = gameState.wordLength;
 
@@ -297,6 +426,102 @@ class _WordDisplay extends StatelessWidget {
           textAlign: TextAlign.center,
         ),
       ],
+    );
+  }
+}
+
+class _WordSelectionDialog extends ConsumerWidget {
+  const _WordSelectionDialog({
+    required this.words,
+    required this.onWordChosen,
+  });
+
+  final List<String> words;
+  final ValueChanged<String> onWordChosen;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final timer = ref.watch(timerProvider);
+
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 380),
+        padding: const EdgeInsets.all(22),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: AppColors.primary, width: 2),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.6),
+              blurRadius: 24,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.palette_rounded, color: AppColors.secondary, size: 26),
+                const SizedBox(width: 8),
+                Text(
+                  '¡Te toca dibujar!',
+                  style: GoogleFonts.nunito(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Escoge una palabra antes de que se acabe el tiempo ($timer s):',
+              style: GoogleFonts.nunito(
+                color: Colors.white70,
+                fontSize: 13,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 18),
+            ...words.map((word) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.cardColor,
+                      foregroundColor: Colors.white,
+                      elevation: 4,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        side: const BorderSide(color: AppColors.secondary, width: 1.5),
+                      ),
+                    ),
+                    onPressed: () => onWordChosen(word),
+                    child: Text(
+                      word.toUpperCase(),
+                      style: GoogleFonts.nunito(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1.2,
+                        color: AppColors.secondary,
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }),
+          ],
+        ),
+      ),
     );
   }
 }

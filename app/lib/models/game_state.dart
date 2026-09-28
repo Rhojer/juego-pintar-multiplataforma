@@ -65,6 +65,7 @@ class GameState {
     this.wordHint,
     this.currentWord,       // Only populated for the drawer
     this.lastWord,          // Set at end of turn so guessers can see it
+    this.isChoosingWord = false,
   });
 
   final String roomCode;
@@ -78,6 +79,7 @@ class GameState {
   final int timeLeft;
   final String myId;
   final String myNickname;
+  final bool isChoosingWord;
 
   /// Underscores and revealed letters shown to guessers: e.g. "_ _ v _ l _"
   final String? wordHint;
@@ -119,6 +121,7 @@ class GameState {
       timeLeft: 80,
       myId: myId,
       myNickname: myNickname,
+      isChoosingWord: false,
     );
   }
 
@@ -139,6 +142,7 @@ class GameState {
     String? wordHint,
     String? currentWord,
     String? lastWord,
+    bool? isChoosingWord,
     bool clearCurrentWord = false,
     bool clearLastWord = false,
   }) {
@@ -157,6 +161,7 @@ class GameState {
       wordHint: wordHint ?? this.wordHint,
       currentWord: clearCurrentWord ? null : (currentWord ?? this.currentWord),
       lastWord: clearLastWord ? null : (lastWord ?? this.lastWord),
+      isChoosingWord: isChoosingWord ?? this.isChoosingWord,
     );
   }
 
