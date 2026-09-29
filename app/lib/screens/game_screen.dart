@@ -277,80 +277,117 @@ class _TopBar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final timer = ref.watch(timerProvider);
-    final timerColor = timer > 40
+    final timerColor = timer > 30
         ? AppColors.timerGreen
         : timer > 15
             ? AppColors.timerYellow
             : AppColors.timerRed;
 
     return Container(
-      color: AppColors.surface,
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        border: const Border(bottom: BorderSide(color: AppColors.borderSubtle, width: 2)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0xFF050C27),
+            offset: Offset(0, 4),
+            blurRadius: 0,
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       child: Row(
         children: [
+          // Logo Rayando con estilo arcade
+          Text(
+            'RAYANDO',
+            style: GoogleFonts.rubik(
+              fontSize: 16,
+              fontWeight: FontWeight.w900,
+              color: AppColors.primary,
+              letterSpacing: -0.5,
+            ),
+          ),
+          const SizedBox(width: 10),
           // Room code badge (tap to copy)
           if (gameState.roomCode.isNotEmpty)
             Tooltip(
               message: 'Toca para copiar código',
               child: InkWell(
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(9999),
                 onTap: () {
                   Clipboard.setData(ClipboardData(text: gameState.roomCode));
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('¡Código ${gameState.roomCode} copiado! Compártelo con tus panas.'),
-                      duration: const Duration(seconds: 2),
+                    const SnackBar(
+                      content: Text('¡Código copiado! Pásaselo a tus panas.'),
+                      duration: Duration(seconds: 2),
                       backgroundColor: AppColors.primary,
                     ),
                   );
                 },
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-                  margin: const EdgeInsets.only(right: 6),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: AppColors.primary.withOpacity(0.7), width: 1.2),
+                    color: AppColors.cardColor,
+                    borderRadius: BorderRadius.circular(9999),
+                    border: Border.all(color: AppColors.borderSubtle, width: 1.5),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.copy_rounded, color: AppColors.primary, size: 12),
-                      const SizedBox(width: 4),
+                      Text(
+                        'SALA: ',
+                        style: GoogleFonts.rubik(
+                          color: AppColors.textMuted,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 11,
+                        ),
+                      ),
                       Text(
                         gameState.roomCode,
-                        style: GoogleFonts.nunito(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w800,
+                        style: GoogleFonts.rubik(
+                          color: AppColors.accent,
+                          fontWeight: FontWeight.w900,
                           fontSize: 12,
                         ),
                       ),
+                      const SizedBox(width: 4),
+                      const Icon(Icons.copy_rounded, color: AppColors.accent, size: 12),
                     ],
                   ),
                 ),
               ),
             ),
-          // Round info
+          const SizedBox(width: 8),
+          // Round info pill
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
             decoration: BoxDecoration(
               color: AppColors.cardColor,
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(9999),
+              border: Border.all(color: AppColors.borderSubtle, width: 1.5),
             ),
-            child: Text(
-              'Ronda ${gameState.currentRound}/${gameState.totalRounds}',
-              style: GoogleFonts.nunito(
-                color: AppColors.secondary,
-                fontWeight: FontWeight.w700,
-                fontSize: 12,
-              ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.refresh_rounded, size: 12, color: AppColors.secondary),
+                const SizedBox(width: 4),
+                Text(
+                  'Ronda ${gameState.currentRound}/${gameState.totalRounds}',
+                  style: GoogleFonts.rubik(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 11,
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 12),
           // Word / hint area
           Expanded(child: _WordDisplay(gameState: gameState)),
-          const SizedBox(width: 8),
-          // Timer
+          const SizedBox(width: 10),
+          // Radial Circular Timer
           _TimerWidget(seconds: timer, color: timerColor),
         ],
       ),
@@ -459,102 +496,6 @@ class _WordDisplay extends StatelessWidget {
   }
 }
 
-class _WordSelectionDialog extends ConsumerWidget {
-  const _WordSelectionDialog({
-    required this.words,
-    required this.onWordChosen,
-  });
-
-  final List<String> words;
-  final ValueChanged<String> onWordChosen;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final timer = ref.watch(timerProvider);
-
-    return Dialog(
-      backgroundColor: Colors.transparent,
-      elevation: 0,
-      child: Container(
-        constraints: const BoxConstraints(maxWidth: 380),
-        padding: const EdgeInsets.all(22),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: AppColors.primary, width: 2),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.6),
-              blurRadius: 24,
-              offset: const Offset(0, 10),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.palette_rounded, color: AppColors.secondary, size: 26),
-                const SizedBox(width: 8),
-                Text(
-                  '¡Te toca dibujar!',
-                  style: GoogleFonts.nunito(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'Escoge una palabra antes de que se acabe el tiempo ($timer s):',
-              style: GoogleFonts.nunito(
-                color: Colors.white70,
-                fontSize: 13,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 18),
-            ...words.map((word) {
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: SizedBox(
-                  width: double.infinity,
-                  height: 48,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.cardColor,
-                      foregroundColor: Colors.white,
-                      elevation: 4,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        side: const BorderSide(color: AppColors.secondary, width: 1.5),
-                      ),
-                    ),
-                    onPressed: () => onWordChosen(word),
-                    child: Text(
-                      word.toUpperCase(),
-                      style: GoogleFonts.nunito(
-                        fontSize: 17,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 1.2,
-                        color: AppColors.secondary,
-                      ),
-                    ),
-                  ),
-                ),
-              );
-            }),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 class _TimerWidget extends StatelessWidget {
   const _TimerWidget({required this.seconds, required this.color});
   final int seconds;
@@ -562,24 +503,46 @@ class _TimerWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      width: 52,
-      height: 52,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: color.withOpacity(0.15),
-        border: Border.all(color: color, width: 2.5),
-      ),
-      child: Center(
-        child: Text(
-          '$seconds',
-          style: GoogleFonts.nunito(
+    // Normalizing between 0 and 80s
+    final progress = (seconds / 80.0).clamp(0.0, 1.0);
+
+    return SizedBox(
+      width: 44,
+      height: 44,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          CircularProgressIndicator(
+            value: progress,
+            backgroundColor: AppColors.cardColor,
             color: color,
-            fontSize: 18,
-            fontWeight: FontWeight.w900,
+            strokeWidth: 3.5,
           ),
-        ),
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: AppColors.surface,
+              boxShadow: [
+                BoxShadow(
+                  color: color.withOpacity(0.3),
+                  blurRadius: 8,
+                ),
+              ],
+            ),
+            child: Center(
+              child: Text(
+                '$seconds',
+                style: GoogleFonts.rubik(
+                  color: color,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -602,59 +565,97 @@ class DrawingCanvas extends ConsumerWidget {
 
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(8.0),
+        padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
         child: AspectRatio(
           aspectRatio: 4 / 3,
           child: Container(
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(color: AppColors.cardColor, width: 3),
+              boxShadow: const [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.4),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
+                  color: Color(0xFF050C27),
+                  offset: Offset(0, 6),
+                  blurRadius: 0,
                 ),
               ],
             ),
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final canvasW = constraints.maxWidth;
-                  final canvasH = constraints.maxHeight;
+              borderRadius: BorderRadius.circular(19),
+              child: Stack(
+                children: [
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final canvasW = constraints.maxWidth;
+                      final canvasH = constraints.maxHeight;
 
-                  Widget canvasWidget = CustomPaint(
-                    painter: _CanvasPainter(
-                      strokes: drawState.strokes,
-                      activeStroke: drawState.activeStroke,
+                      Widget canvasWidget = CustomPaint(
+                        painter: _CanvasPainter(
+                          strokes: drawState.strokes,
+                          activeStroke: drawState.activeStroke,
+                        ),
+                        child: const SizedBox.expand(),
+                      );
+
+                      if (isDrawing) {
+                        canvasWidget = GestureDetector(
+                          onPanStart: (details) {
+                            if (canvasW <= 0 || canvasH <= 0) return;
+                            final vx = (details.localPosition.dx * (virtualWidth / canvasW)).clamp(0.0, virtualWidth);
+                            final vy = (details.localPosition.dy * (virtualHeight / canvasH)).clamp(0.0, virtualHeight);
+                            ref.read(drawingProvider.notifier).startStroke(vx, vy);
+                          },
+                          onPanUpdate: (details) {
+                            if (canvasW <= 0 || canvasH <= 0) return;
+                            final vx = (details.localPosition.dx * (virtualWidth / canvasW)).clamp(0.0, virtualWidth);
+                            final vy = (details.localPosition.dy * (virtualHeight / canvasH)).clamp(0.0, virtualHeight);
+                            ref.read(drawingProvider.notifier).addPoint(vx, vy);
+                          },
+                          onPanEnd: (_) {
+                            ref.read(drawingProvider.notifier).endStroke();
+                          },
+                          child: canvasWidget,
+                        );
+                      }
+
+                      return canvasWidget;
+                    },
+                  ),
+                  if (!isDrawing)
+                    Positioned(
+                      top: 10,
+                      right: 10,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF141B36).withOpacity(0.08),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.black12),
+                        ),
+                        child: Text(
+                          'Sólo lectura',
+                          style: GoogleFonts.nunitoSans(
+                            color: Colors.black45,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
                     ),
-                    child: const SizedBox.expand(),
-                  );
-
-                  if (isDrawing) {
-                    canvasWidget = GestureDetector(
-                      onPanStart: (details) {
-                        if (canvasW <= 0 || canvasH <= 0) return;
-                        final vx = (details.localPosition.dx * (virtualWidth / canvasW)).clamp(0.0, virtualWidth);
-                        final vy = (details.localPosition.dy * (virtualHeight / canvasH)).clamp(0.0, virtualHeight);
-                        ref.read(drawingProvider.notifier).startStroke(vx, vy);
-                      },
-                      onPanUpdate: (details) {
-                        if (canvasW <= 0 || canvasH <= 0) return;
-                        final vx = (details.localPosition.dx * (virtualWidth / canvasW)).clamp(0.0, virtualWidth);
-                        final vy = (details.localPosition.dy * (virtualHeight / canvasH)).clamp(0.0, virtualHeight);
-                        ref.read(drawingProvider.notifier).addPoint(vx, vy);
-                      },
-                      onPanEnd: (_) {
-                        ref.read(drawingProvider.notifier).endStroke();
-                      },
-                      child: canvasWidget,
-                    );
-                  }
-
-                  return canvasWidget;
-                },
+                  Positioned(
+                    bottom: 6,
+                    left: 10,
+                    child: Text(
+                      '✏️ Rayando Canvas v2.0',
+                      style: GoogleFonts.nunitoSans(
+                        color: Colors.black26,
+                        fontSize: 9,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -764,10 +765,10 @@ class DrawingToolbar extends ConsumerStatefulWidget {
 }
 
 class _DrawingToolbarState extends ConsumerState<DrawingToolbar> {
-  int _selectedColorIndex = 0;
+  int _selectedColorIndex = 4; // Default to Yellow (#FFC107)
   int _selectedSizeIndex = 1; // 0=thin, 1=medium, 2=thick
   static const _sizes = [4.0, 8.0, 16.0];
-  static const _sizeIcons = [Icons.remove, Icons.horizontal_rule, Icons.rectangle];
+  static const _sizeDotRadii = [3.0, 5.5, 9.0];
 
   @override
   Widget build(BuildContext context) {
@@ -776,57 +777,87 @@ class _DrawingToolbarState extends ConsumerState<DrawingToolbar> {
         ref.read(drawingProvider.notifier).isEraser;
 
     return Container(
-      color: AppColors.surface,
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        border: const Border(
+          top: BorderSide(color: AppColors.borderSubtle, width: 2),
+        ),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0xFF050C27),
+            offset: Offset(0, -3),
+            blurRadius: 0,
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Color palette row
+          // 1. Color palette row
           SizedBox(
-            height: 36,
+            height: 40,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: AppColors.drawingColors.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 4),
+              separatorBuilder: (_, __) => const SizedBox(width: 8),
               itemBuilder: (ctx, i) {
                 final color = AppColors.drawingColors[i];
                 final selected = _selectedColorIndex == i && !isEraser;
-                return GestureDetector(
-                  onTap: () {
-                    setState(() => _selectedColorIndex = i);
-                    notifier.setColor(
-                      '#${color.value.toRadixString(16).substring(2).toUpperCase()}',
-                    );
-                    notifier.setEraser(false);
-                    notifier.setStrokeWidth(_sizes[_selectedSizeIndex]);
-                  },
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 150),
-                    width: selected ? 34 : 28,
-                    height: selected ? 34 : 28,
-                    decoration: BoxDecoration(
-                      color: color,
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: selected ? Colors.white : Colors.white30,
-                        width: selected ? 3 : 1,
+                return Center(
+                  child: GestureDetector(
+                    onTap: () {
+                      setState(() => _selectedColorIndex = i);
+                      notifier.setColor(
+                        '#${color.value.toRadixString(16).substring(2).toUpperCase()}',
+                      );
+                      notifier.setEraser(false);
+                      notifier.setStrokeWidth(_sizes[_selectedSizeIndex]);
+                    },
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 150),
+                      width: selected ? 36 : 28,
+                      height: selected ? 36 : 28,
+                      decoration: BoxDecoration(
+                        color: color,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: selected ? Colors.white : Colors.white24,
+                          width: selected ? 3.5 : 1.5,
+                        ),
+                        boxShadow: selected
+                            ? [
+                                BoxShadow(
+                                  color: color.withOpacity(0.7),
+                                  blurRadius: 8,
+                                  spreadRadius: 1,
+                                ),
+                              ]
+                            : null,
                       ),
-                      boxShadow: selected
-                          ? [BoxShadow(color: color.withOpacity(0.6), blurRadius: 6)]
-                          : null,
                     ),
                   ),
                 );
               },
             ),
           ),
-          const SizedBox(height: 6),
-          // Tools row: sizes + eraser + clear
+          const SizedBox(height: 8),
+          // 2. Tools row: sizes + eraser + clear
           Row(
             children: [
+              Text(
+                'GROSOR:',
+                style: GoogleFonts.rubik(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w900,
+                  color: AppColors.textMuted,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const SizedBox(width: 8),
               // Stroke sizes
               ...List.generate(_sizes.length, (i) {
-                final selected = _selectedSizeIndex == i;
+                final selected = _selectedSizeIndex == i && !isEraser;
                 return GestureDetector(
                   onTap: () {
                     setState(() => _selectedSizeIndex = i);
@@ -835,20 +866,38 @@ class _DrawingToolbarState extends ConsumerState<DrawingToolbar> {
                   },
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 150),
-                    width: 36,
-                    height: 36,
+                    width: 34,
+                    height: 34,
                     margin: const EdgeInsets.only(right: 6),
                     decoration: BoxDecoration(
-                      color: selected ? AppColors.accent : AppColors.cardColor,
-                      borderRadius: BorderRadius.circular(8),
+                      color: selected ? AppColors.primary : AppColors.cardColor,
+                      shape: BoxShape.circle,
                       border: Border.all(
-                        color: selected ? AppColors.accent : Colors.white12,
+                        color: selected ? AppColors.primary : AppColors.borderSubtle,
+                        width: 2,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: selected ? const Color(0xFFC79100) : const Color(0xFF050C27),
+                          offset: const Offset(0, 2),
+                          blurRadius: 0,
+                        ),
+                      ],
+                    ),
+                    child: Center(
+                      child: Container(
+                        width: _sizeDotRadii[i] * 2,
+                        height: _sizeDotRadii[i] * 2,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: selected ? const Color(0xFF0B1124) : Colors.white,
+                        ),
                       ),
                     ),
-                    child: Icon(_sizeIcons[i], color: Colors.white, size: 18),
                   ),
                 );
               }),
+              const SizedBox(width: 6),
               // Eraser
               GestureDetector(
                 onTap: () {
@@ -859,17 +908,41 @@ class _DrawingToolbarState extends ConsumerState<DrawingToolbar> {
                   final erasing = ref2.watch(drawingProvider.notifier).isEraser;
                   return AnimatedContainer(
                     duration: const Duration(milliseconds: 150),
-                    width: 36,
-                    height: 36,
-                    margin: const EdgeInsets.only(right: 6),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
                       color: erasing ? AppColors.primary : AppColors.cardColor,
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(9999),
                       border: Border.all(
-                        color: erasing ? AppColors.primary : Colors.white12,
+                        color: erasing ? AppColors.primary : AppColors.borderSubtle,
+                        width: 2,
                       ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: erasing ? const Color(0xFFC79100) : const Color(0xFF050C27),
+                          offset: const Offset(0, 2),
+                          blurRadius: 0,
+                        ),
+                      ],
                     ),
-                    child: const Icon(Icons.auto_fix_high_rounded, color: Colors.white, size: 18),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.auto_fix_high_rounded,
+                          color: erasing ? const Color(0xFF0B1124) : Colors.white,
+                          size: 16,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Borrador',
+                          style: GoogleFonts.rubik(
+                            color: erasing ? const Color(0xFF0B1124) : Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ],
+                    ),
                   );
                 }),
               ),
@@ -880,23 +953,30 @@ class _DrawingToolbarState extends ConsumerState<DrawingToolbar> {
                   ref.read(drawingProvider.notifier).clearAndNotifyServer();
                 },
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    color: AppColors.wrong.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: AppColors.wrong.withOpacity(0.5)),
+                    color: AppColors.wrong.withOpacity(0.18),
+                    borderRadius: BorderRadius.circular(9999),
+                    border: Border.all(color: AppColors.wrong, width: 1.5),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0xFF4A0008),
+                        offset: Offset(0, 2),
+                        blurRadius: 0,
+                      ),
+                    ],
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.delete_outline_rounded, color: AppColors.wrong, size: 18),
+                      const Icon(Icons.delete_outline_rounded, color: AppColors.wrong, size: 16),
                       const SizedBox(width: 4),
                       Text(
-                        'Borrar',
-                        style: GoogleFonts.nunito(
+                        'Limpiar',
+                        style: GoogleFonts.rubik(
                           color: AppColors.wrong,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
                         ),
                       ),
                     ],
@@ -950,29 +1030,82 @@ class ChatPanel extends ConsumerWidget {
     return Container(
       decoration: const BoxDecoration(
         color: AppColors.surface,
-        border: Border(top: BorderSide(color: Colors.white10)),
+        border: Border(top: BorderSide(color: AppColors.borderSubtle, width: 2)),
       ),
       child: Column(
         children: [
-          // Player score strip
+          // 1. Live status bar
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+            decoration: const BoxDecoration(
+              color: AppColors.surface,
+              border: Border(bottom: BorderSide(color: AppColors.borderSubtle)),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.chat_bubble_outline_rounded, size: 14, color: AppColors.textMuted),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Respuestas en Vivo',
+                      style: GoogleFonts.rubik(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.textMuted,
+                      ),
+                    ),
+                  ],
+                ),
+                Row(
+                  children: [
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: const BoxDecoration(
+                        color: AppColors.correct,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 5),
+                    Text(
+                      'EN VIVO',
+                      style: GoogleFonts.rubik(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w900,
+                        color: AppColors.correct,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          // 2. Player score strip
           _PlayerScoreStrip(players: gameState.sortedByScore, myId: gameState.myId),
-          // Chat messages
+          // 3. Chat messages
           Expanded(
             child: messages.isEmpty
                 ? Center(
                     child: Text(
                       '¡Empieza a adivinar, pana!',
-                      style: GoogleFonts.nunito(color: Colors.white24),
+                      style: GoogleFonts.nunitoSans(
+                        color: AppColors.textMuted,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   )
                 : ListView.builder(
                     controller: scrollCtrl,
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     itemCount: messages.length,
                     itemBuilder: (ctx, i) => ChatMessageWidget(message: messages[i]),
                   ),
           ),
-          // Guess input
+          // 4. Guess input dock
           _GuessInput(
             controller: guessCtrl,
             disabled: inputDisabled,
@@ -994,24 +1127,92 @@ class _PlayerScoreStrip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 52,
-      color: AppColors.cardColor,
+      height: 56,
+      decoration: const BoxDecoration(
+        color: Color(0xFF131A35),
+        border: Border(bottom: BorderSide(color: AppColors.borderSubtle)),
+      ),
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         itemCount: players.length,
         itemBuilder: (ctx, i) {
           final p = players[i];
-          return Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: PlayerAvatar(
-              nickname: p.nickname,
-              avatar: p.avatar,
-              size: 36,
-              score: p.score,
-              isMe: p.id == myId,
-              isDrawing: p.isDrawing,
-              hasGuessed: p.hasGuessed,
+          final isMe = p.id == myId;
+          final isDrawing = p.isDrawing;
+
+          return Container(
+            margin: const EdgeInsets.only(right: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: isDrawing
+                  ? AppColors.primary.withOpacity(0.15)
+                  : isMe
+                      ? AppColors.cardColor
+                      : AppColors.surface,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: isDrawing
+                    ? AppColors.primary
+                    : isMe
+                        ? AppColors.accent.withOpacity(0.6)
+                        : AppColors.borderSubtle,
+                width: isDrawing || isMe ? 1.5 : 1,
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                PlayerAvatar(
+                  nickname: p.nickname,
+                  avatar: p.avatar,
+                  size: 30,
+                  score: null,
+                  isMe: isMe,
+                  isDrawing: isDrawing,
+                  hasGuessed: p.hasGuessed,
+                ),
+                const SizedBox(width: 8),
+                Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          '${i + 1}° ',
+                          style: GoogleFonts.rubik(
+                            color: i == 0
+                                ? AppColors.primary
+                                : i == 1
+                                    ? AppColors.textMuted
+                                    : AppColors.secondary,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        Text(
+                          p.nickname + (isMe ? ' (tú)' : ''),
+                          style: GoogleFonts.nunitoSans(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: isMe ? FontWeight.w800 : FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Text(
+                      '${p.score} pts',
+                      style: GoogleFonts.rubik(
+                        color: AppColors.accent,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           );
         },
@@ -1039,39 +1240,64 @@ class _GuessInput extends StatelessWidget {
   Widget build(BuildContext context) {
     String hintText;
     if (isDrawing) {
-      hintText = '¡Estás dibujando!';
+      hintText = '¡Estás dibujando, cheo!';
     } else if (guessedCorrectly) {
-      hintText = VzlaMessages.youGuessedIt;
+      hintText = '🎉 ¡Ya adivinaste, qué crack!';
     } else {
-      hintText = '¡Adivina la palabra, pana!';
+      hintText = '¡Escribe tu respuesta aquí...! 🚀';
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-      decoration: const BoxDecoration(
-        border: Border(top: BorderSide(color: Colors.white10)),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        border: const Border(top: BorderSide(color: AppColors.borderSubtle, width: 1.5)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0xFF050C27),
+            offset: Offset(0, -2),
+            blurRadius: 0,
+          ),
+        ],
       ),
       child: Row(
         children: [
           Expanded(
-            child: TextField(
-              controller: controller,
-              enabled: !disabled,
-              onSubmitted: (_) => onSend(),
-              textInputAction: TextInputAction.send,
-              style: GoogleFonts.nunito(color: Colors.white, fontSize: 14),
-              decoration: InputDecoration(
-                hintText: hintText,
-                hintStyle: TextStyle(
-                  color: guessedCorrectly ? AppColors.correct : Colors.white38,
-                  fontSize: 13,
+            child: Container(
+              height: 46,
+              decoration: BoxDecoration(
+                color: const Color(0xFF050C27),
+                borderRadius: BorderRadius.circular(9999),
+                border: Border.all(
+                  color: guessedCorrectly
+                      ? AppColors.correct
+                      : AppColors.borderSubtle,
+                  width: 2,
                 ),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                filled: true,
-                fillColor: AppColors.cardColor,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(24),
-                  borderSide: BorderSide.none,
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              child: Center(
+                child: TextField(
+                  controller: controller,
+                  enabled: !disabled,
+                  onSubmitted: (_) => onSend(),
+                  textInputAction: TextInputAction.send,
+                  style: GoogleFonts.nunitoSans(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
+                  decoration: InputDecoration(
+                    hintText: hintText,
+                    hintStyle: GoogleFonts.nunitoSans(
+                      color: guessedCorrectly ? AppColors.correct : AppColors.textMuted,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    isDense: true,
+                    contentPadding: EdgeInsets.zero,
+                    border: InputBorder.none,
+                  ),
                 ),
               ),
             ),
@@ -1079,18 +1305,45 @@ class _GuessInput extends StatelessWidget {
           const SizedBox(width: 8),
           GestureDetector(
             onTap: disabled ? null : onSend,
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              width: 42,
-              height: 42,
+            child: Container(
+              height: 46,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
               decoration: BoxDecoration(
-                color: disabled ? Colors.white12 : AppColors.primary,
-                shape: BoxShape.circle,
+                color: disabled ? const Color(0xFF293664) : AppColors.primary,
+                borderRadius: BorderRadius.circular(9999),
+                border: Border.all(
+                  color: disabled ? const Color(0xFF293664) : AppColors.primary,
+                  width: 1.5,
+                ),
+                boxShadow: disabled
+                    ? null
+                    : const [
+                        BoxShadow(
+                          color: Color(0xFFC79100),
+                          offset: Offset(0, 3),
+                          blurRadius: 0,
+                        ),
+                      ],
               ),
-              child: Icon(
-                Icons.send_rounded,
-                color: disabled ? Colors.white24 : Colors.white,
-                size: 20,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Enviar',
+                    style: GoogleFonts.rubik(
+                      color: disabled ? Colors.white38 : const Color(0xFF0B1124),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Icon(
+                    Icons.send_rounded,
+                    color: disabled ? Colors.white38 : const Color(0xFF0B1124),
+                    size: 16,
+                  ),
+                ],
               ),
             ),
           ),
@@ -1119,84 +1372,205 @@ class _WordSelectionOverlay extends ConsumerWidget {
 
     return Positioned.fill(
       child: BackdropFilter(
-        filter: ui.ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+        filter: ui.ImageFilter.blur(sigmaX: 12, sigmaY: 12),
         child: Container(
-          color: Colors.black.withOpacity(0.75),
-          padding: const EdgeInsets.symmetric(horizontal: 24),
+          color: const Color(0xFF0A112C).withOpacity(0.85),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
           child: Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 420),
-              child: Card(
-                color: AppColors.surface,
-                elevation: 16,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
-                  side: const BorderSide(color: AppColors.secondary, width: 2),
+              constraints: const BoxConstraints(maxWidth: 440),
+              child: Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(28),
+                  border: Border.all(color: AppColors.primary, width: 2.5),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0xFF050C27),
+                      offset: Offset(0, 10),
+                      blurRadius: 0,
+                    ),
+                  ],
                 ),
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.brush_rounded, color: AppColors.secondary, size: 28),
-                          const SizedBox(width: 8),
-                          Text(
-                            '¡Te toca dibujar!',
-                            style: GoogleFonts.nunito(
-                              color: Colors.white,
-                              fontSize: 22,
-                              fontWeight: FontWeight.w800,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: const BoxDecoration(
+                            color: AppColors.primary,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.brush_rounded, color: Color(0xFF0B1124), size: 24),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '¡TU TURNO, PANA!',
+                                style: GoogleFonts.rubik(
+                                  color: AppColors.primary,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 1,
+                                ),
+                              ),
+                              Text(
+                                'Elige tu palabra',
+                                style: GoogleFonts.rubik(
+                                  color: Colors.white,
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        // Timer badge
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: AppColors.cardColor,
+                            borderRadius: BorderRadius.circular(9999),
+                            border: Border.all(color: AppColors.secondary, width: 1.5),
+                          ),
+                          child: Text(
+                            '${timer}s',
+                            style: GoogleFonts.rubik(
+                              color: AppColors.secondary,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w900,
                             ),
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Elige una palabra antes de que se acabe el tiempo ($timer s):',
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.nunito(
-                          color: Colors.white70,
-                          fontSize: 14,
                         ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    Text(
+                      'Los panas en la sala están esperando. ¡Elige una palabra criolla y ponte a rayar!',
+                      style: GoogleFonts.nunitoSans(
+                        color: AppColors.textMuted,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
                       ),
-                      const SizedBox(height: 20),
-                      ...words.map(
-                        (word) => Padding(
-                          padding: const EdgeInsets.only(bottom: 12),
-                          child: SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.cardColor,
-                                foregroundColor: Colors.white,
-                                elevation: 4,
-                                padding: const EdgeInsets.symmetric(vertical: 16),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(14),
-                                  side: const BorderSide(
-                                    color: Colors.white24,
-                                    width: 1,
+                    ),
+                    const SizedBox(height: 20),
+                    ...words.asMap().entries.map((entry) {
+                      final idx = entry.key;
+                      final word = entry.value;
+                      final difficulty = idx == 0 ? 'Fácil' : idx == 1 ? 'Media' : 'Candela 🔥';
+                      final pts = idx == 0 ? '+100 pts' : idx == 1 ? '+150 pts' : '+250 pts';
+                      final isRecommended = idx == 1;
+
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(20),
+                          onTap: () => onWordChosen(word),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                            decoration: BoxDecoration(
+                              color: isRecommended ? AppColors.primary : AppColors.cardColor,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: isRecommended ? AppColors.primary : AppColors.borderSubtle,
+                                width: 2,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: isRecommended ? const Color(0xFFC79100) : const Color(0xFF090D1C),
+                                  offset: const Offset(0, 4),
+                                  blurRadius: 0,
+                                ),
+                              ],
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: isRecommended ? const Color(0xFF0B1124) : AppColors.surface,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    idx == 0
+                                        ? Icons.restaurant_rounded
+                                        : idx == 1
+                                            ? Icons.air_rounded
+                                            : Icons.local_fire_department_rounded,
+                                    size: 18,
+                                    color: isRecommended ? AppColors.primary : AppColors.secondary,
                                   ),
                                 ),
-                              ),
-                              onPressed: () => onWordChosen(word),
-                              child: Text(
-                                word.toUpperCase(),
-                                style: GoogleFonts.nunito(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 1.2,
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        word.toUpperCase(),
+                                        style: GoogleFonts.rubik(
+                                          color: isRecommended ? const Color(0xFF0B1124) : Colors.white,
+                                          fontSize: 17,
+                                          fontWeight: FontWeight.w900,
+                                          letterSpacing: 0.5,
+                                        ),
+                                      ),
+                                      Row(
+                                        children: [
+                                          Text(
+                                            difficulty,
+                                            style: GoogleFonts.rubik(
+                                              color: isRecommended
+                                                  ? const Color(0xFF0B1124).withOpacity(0.8)
+                                                  : AppColors.accent,
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w800,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            '${word.length} Letras',
+                                            style: GoogleFonts.nunitoSans(
+                                              color: isRecommended
+                                                  ? const Color(0xFF0B1124).withOpacity(0.7)
+                                                  : AppColors.textMuted,
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                              ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: isRecommended ? const Color(0xFF0B1124) : AppColors.surface,
+                                    borderRadius: BorderRadius.circular(9999),
+                                  ),
+                                  child: Text(
+                                    pts,
+                                    style: GoogleFonts.rubik(
+                                      color: isRecommended ? AppColors.primary : AppColors.secondary,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w900,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
+                      );
+                    }),
+                  ],
                 ),
               ),
             ),
@@ -1218,128 +1592,265 @@ class _TurnEndScoreboardOverlay extends StatelessWidget {
       ..sort((a, b) => b.score.compareTo(a.score));
 
     final revealedWord = gameState.currentWord?.trim();
+    final top3 = sortedPlayers.take(3).toList();
 
     return Positioned.fill(
       child: BackdropFilter(
-        filter: ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        filter: ui.ImageFilter.blur(sigmaX: 12, sigmaY: 12),
         child: Container(
-          color: Colors.black.withOpacity(0.7),
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+          color: const Color(0xFF0A112C).withOpacity(0.88),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
           child: Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 460),
-              child: Card(
-                color: AppColors.surface,
-                elevation: 20,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(22),
-                  side: BorderSide(color: Colors.white.withOpacity(0.12), width: 1.5),
+              constraints: const BoxConstraints(maxWidth: 480, maxHeight: 720),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(26),
+                  border: Border.all(color: AppColors.borderSubtle, width: 2),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0xFF050C27),
+                      offset: Offset(0, 10),
+                      blurRadius: 0,
+                    ),
+                  ],
                 ),
-                child: Padding(
-                  padding: const EdgeInsets.all(22),
+                padding: const EdgeInsets.all(20),
+                child: SingleChildScrollView(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Round badge
+                      // 1. Badge & Title
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                         decoration: BoxDecoration(
-                          color: AppColors.cardColor,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.white12),
+                          color: AppColors.secondaryContainer,
+                          borderRadius: BorderRadius.circular(9999),
                         ),
                         child: Text(
-                          'Ronda ${gameState.currentRound} de ${gameState.totalRounds}',
-                          style: GoogleFonts.nunito(
-                            color: Colors.white70,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
+                          '🎉 ¡FIEBRE CRIOLLA! 🎺',
+                          style: GoogleFonts.rubik(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 0.5,
                           ),
                         ),
                       ),
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 8),
                       Text(
-                        '¡Fin del turno!',
-                        style: GoogleFonts.nunito(
-                          color: Colors.white,
+                        '¡RONDA ${gameState.currentRound} TERMINADA!',
+                        style: GoogleFonts.rubik(
+                          color: AppColors.primary,
                           fontSize: 22,
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: -0.5,
                         ),
+                        textAlign: TextAlign.center,
                       ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Todos los panas ya soltaron el lápiz y adivinaron en esta vuelta.',
+                        style: GoogleFonts.nunitoSans(
+                          color: AppColors.textMuted,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 12),
+
+                      // 2. Word reveal pill
                       if (revealedWord != null && revealedWord.isNotEmpty) ...[
-                        const SizedBox(height: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: AppColors.cardColor,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: AppColors.primary.withOpacity(0.6), width: 1.5),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.lightbulb_rounded, color: AppColors.primary, size: 16),
+                              const SizedBox(width: 8),
+                              Text(
+                                'La palabra era: ',
+                                style: GoogleFonts.nunitoSans(
+                                  color: AppColors.textMuted,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              Text(
+                                revealedWord.toUpperCase(),
+                                style: GoogleFonts.rubik(
+                                  color: AppColors.accent,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 1,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+
+                      // 3. Podio de la Ronda (Top 3)
+                      if (top3.isNotEmpty) ...[
                         Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
-                              'La palabra era: ',
-                              style: GoogleFonts.nunito(
-                                color: Colors.white60,
+                              '🏆 Podio de la Ronda',
+                              style: GoogleFonts.rubik(
+                                color: Colors.white,
                                 fontSize: 14,
+                                fontWeight: FontWeight.w800,
                               ),
                             ),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                               decoration: BoxDecoration(
-                                color: AppColors.secondary.withOpacity(0.2),
+                                color: AppColors.cardColor,
                                 borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: AppColors.secondary),
                               ),
                               child: Text(
-                                revealedWord.toUpperCase(),
-                                style: GoogleFonts.nunito(
-                                  color: AppColors.secondary,
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: 1.1,
+                                'Puntos acumulados',
+                                style: GoogleFonts.nunitoSans(
+                                  color: AppColors.accent,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
                                 ),
                               ),
                             ),
                           ],
                         ),
+                        const SizedBox(height: 12),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            // 2nd Place (Left)
+                            if (top3.length > 1)
+                              Expanded(
+                                child: _buildPodiumSlot(
+                                  rank: 2,
+                                  player: top3[1],
+                                  color: const Color(0xFF8E9ECA),
+                                  isCenter: false,
+                                  myId: gameState.myId,
+                                ),
+                              )
+                            else
+                              const Spacer(),
+                            const SizedBox(width: 8),
+
+                            // 1st Place (Center - Highest)
+                            Expanded(
+                              flex: 12,
+                              child: _buildPodiumSlot(
+                                rank: 1,
+                                player: top3[0],
+                                color: AppColors.primary,
+                                isCenter: true,
+                                myId: gameState.myId,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+
+                            // 3rd Place (Right)
+                            if (top3.length > 2)
+                              Expanded(
+                                child: _buildPodiumSlot(
+                                  rank: 3,
+                                  player: top3[2],
+                                  color: AppColors.secondary,
+                                  isCenter: false,
+                                  myId: gameState.myId,
+                                ),
+                              )
+                            else
+                              const Spacer(),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
                       ],
-                      const SizedBox(height: 18),
-                      const Divider(color: Colors.white12, height: 1),
-                      const SizedBox(height: 12),
-                      // Minimalist player list sorted by points
+
+                      // 4. Posiciones Generales
+                      Row(
+                        children: [
+                          const Icon(Icons.format_list_numbered_rounded, color: AppColors.accent, size: 16),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Posiciones Generales (${sortedPlayers.length} Panas)',
+                            style: GoogleFonts.rubik(
+                              color: Colors.white,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
                       ListView.separated(
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
                         itemCount: sortedPlayers.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 8),
+                        separatorBuilder: (_, __) => const SizedBox(height: 6),
                         itemBuilder: (context, index) {
                           final player = sortedPlayers[index];
                           final isMe = player.id == gameState.myId;
                           final pointsGained = player.pointsGained;
 
-                          String rankBadge;
-                          if (index == 0) {
-                            rankBadge = '🥇';
-                          } else if (index == 1) {
-                            rankBadge = '🥈';
-                          } else if (index == 2) {
-                            rankBadge = '🥉';
-                          } else {
-                            rankBadge = '${index + 1}°';
-                          }
-
                           return Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
                             decoration: BoxDecoration(
-                              color: isMe ? AppColors.cardColor : Colors.white.withOpacity(0.04),
-                              borderRadius: BorderRadius.circular(12),
+                              color: isMe
+                                  ? AppColors.accent.withOpacity(0.12)
+                                  : AppColors.cardColor.withOpacity(0.6),
+                              borderRadius: BorderRadius.circular(14),
                               border: Border.all(
-                                color: isMe ? AppColors.accent.withOpacity(0.5) : Colors.transparent,
+                                color: isMe
+                                    ? AppColors.accent
+                                    : AppColors.borderSubtle.withOpacity(0.5),
+                                width: isMe ? 1.5 : 1,
                               ),
                             ),
                             child: Row(
                               children: [
-                                SizedBox(
-                                  width: 28,
-                                  child: Text(
-                                    rankBadge,
-                                    style: const TextStyle(fontSize: 16),
+                                Container(
+                                  width: 24,
+                                  height: 24,
+                                  decoration: BoxDecoration(
+                                    color: index == 0
+                                        ? AppColors.primary
+                                        : index == 1
+                                            ? const Color(0xFF8E9ECA)
+                                            : index == 2
+                                                ? AppColors.secondary
+                                                : AppColors.surfaceElevated,
+                                    shape: BoxShape.circle,
                                   ),
+                                  child: Center(
+                                    child: Text(
+                                      '${index + 1}',
+                                      style: GoogleFonts.rubik(
+                                        color: index <= 2 ? const Color(0xFF0B1124) : Colors.white,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w900,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                PlayerAvatar(
+                                  nickname: player.nickname,
+                                  avatar: player.avatar,
+                                  size: 28,
+                                  score: null,
                                 ),
                                 const SizedBox(width: 8),
                                 Expanded(
@@ -1349,21 +1860,28 @@ class _TurnEndScoreboardOverlay extends StatelessWidget {
                                         child: Text(
                                           player.nickname,
                                           overflow: TextOverflow.ellipsis,
-                                          style: GoogleFonts.nunito(
+                                          style: GoogleFonts.nunitoSans(
                                             color: Colors.white,
-                                            fontWeight: isMe ? FontWeight.w800 : FontWeight.w600,
-                                            fontSize: 14,
+                                            fontWeight: isMe ? FontWeight.w800 : FontWeight.w700,
+                                            fontSize: 13,
                                           ),
                                         ),
                                       ),
                                       if (isMe) ...[
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          '(tú)',
-                                          style: GoogleFonts.nunito(
-                                            color: AppColors.secondary,
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.bold,
+                                        const SizedBox(width: 6),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                                          decoration: BoxDecoration(
+                                            color: AppColors.accent,
+                                            borderRadius: BorderRadius.circular(6),
+                                          ),
+                                          child: Text(
+                                            'TÚ',
+                                            style: GoogleFonts.rubik(
+                                              color: const Color(0xFF0B1124),
+                                              fontSize: 9,
+                                              fontWeight: FontWeight.w900,
+                                            ),
                                           ),
                                         ),
                                       ],
@@ -1372,28 +1890,28 @@ class _TurnEndScoreboardOverlay extends StatelessWidget {
                                 ),
                                 if (pointsGained > 0)
                                   Container(
-                                    margin: const EdgeInsets.only(right: 10),
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                    margin: const EdgeInsets.only(right: 8),
+                                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                                     decoration: BoxDecoration(
                                       color: AppColors.correct.withOpacity(0.2),
-                                      borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(color: AppColors.correct.withOpacity(0.6)),
+                                      borderRadius: BorderRadius.circular(9999),
+                                      border: Border.all(color: AppColors.correct, width: 1),
                                     ),
                                     child: Text(
-                                      '+$pointsGained pts',
-                                      style: GoogleFonts.nunito(
+                                      '+$pointsGained',
+                                      style: GoogleFonts.rubik(
                                         color: AppColors.correct,
                                         fontWeight: FontWeight.w800,
-                                        fontSize: 12,
+                                        fontSize: 11,
                                       ),
                                     ),
                                   ),
                                 Text(
                                   '${player.score} pts',
-                                  style: GoogleFonts.nunito(
+                                  style: GoogleFonts.rubik(
                                     color: Colors.white,
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 14,
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 13,
                                   ),
                                 ),
                               ],
@@ -1401,8 +1919,9 @@ class _TurnEndScoreboardOverlay extends StatelessWidget {
                           );
                         },
                       ),
-                      const SizedBox(height: 18),
-                      // Waiting for next turn status
+                      const SizedBox(height: 16),
+
+                      // 5. Footer waiting for next turn
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -1411,15 +1930,16 @@ class _TurnEndScoreboardOverlay extends StatelessWidget {
                             height: 14,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              color: AppColors.secondary,
+                              color: AppColors.primary,
                             ),
                           ),
                           const SizedBox(width: 10),
                           Text(
                             'Siguiente turno en breve...',
-                            style: GoogleFonts.nunito(
-                              color: Colors.white60,
-                              fontSize: 13,
+                            style: GoogleFonts.nunitoSans(
+                              color: AppColors.textMuted,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
                               fontStyle: FontStyle.italic,
                             ),
                           ),
@@ -1432,6 +1952,117 @@ class _TurnEndScoreboardOverlay extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  static Widget _buildPodiumSlot({
+    required int rank,
+    required dynamic player,
+    required Color color,
+    required bool isCenter,
+    required String myId,
+  }) {
+    final isMe = player.id == myId;
+    final pointsGained = player.pointsGained as int? ?? 0;
+
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 8, vertical: isCenter ? 12 : 8),
+      decoration: BoxDecoration(
+        color: AppColors.cardColor,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: color, width: isCenter ? 2.5 : 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF050C27),
+            offset: Offset(0, isCenter ? 6 : 4),
+            blurRadius: 0,
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (rank == 1)
+            const Text('👑', style: TextStyle(fontSize: 18))
+          else
+            Text(
+              rank == 2 ? '🥈' : '🥉',
+              style: const TextStyle(fontSize: 14),
+            ),
+          const SizedBox(height: 4),
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              PlayerAvatar(
+                nickname: player.nickname,
+                avatar: player.avatar,
+                size: isCenter ? 46 : 38,
+                score: null,
+                isMe: isMe,
+              ),
+              Positioned(
+                bottom: 0,
+                right: 0,
+                child: Container(
+                  padding: const EdgeInsets.all(2),
+                  decoration: BoxDecoration(
+                    color: color,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Text(
+                    '$rank',
+                    style: GoogleFonts.rubik(
+                      color: const Color(0xFF0B1124),
+                      fontSize: 9,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            player.nickname,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.rubik(
+              color: Colors.white,
+              fontSize: isCenter ? 12 : 11,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          if (pointsGained > 0) ...[
+            const SizedBox(height: 2),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+              decoration: BoxDecoration(
+                color: isCenter
+                    ? AppColors.primary.withOpacity(0.2)
+                    : AppColors.accent.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(9999),
+              ),
+              child: Text(
+                '+$pointsGained pts',
+                style: GoogleFonts.rubik(
+                  color: isCenter ? AppColors.primary : AppColors.accent,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+          ],
+          const SizedBox(height: 4),
+          Text(
+            '${player.score} pts',
+            style: GoogleFonts.rubik(
+              color: isCenter ? AppColors.primary : Colors.white,
+              fontSize: isCenter ? 13 : 11,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ],
       ),
     );
   }

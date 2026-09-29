@@ -16,49 +16,52 @@ class AppConstants {
   static const int strokeSendInterval = 5; // send every N new points
 }
 
-/// Venezuelan-themed color palette
+/// Venezuelan-themed color palette aligned with Google Stitch DESIGN.md ("Tactile Neopop")
 class AppColors {
   AppColors._();
 
-  // Primary palette - Venezuelan flag inspired
-  static const Color primary = Color(0xFFFF5722); // Deep orange / brick red
-  static const Color secondary = Color(0xFFFFD600); // Venezuelan yellow
-  static const Color accent = Color(0xFF1E88E5); // Venezuelan blue
+  // Core brand accents
+  static const Color primary = Color(0xFFFFC107); // Sunny golden yellow
+  static const Color secondary = Color(0xFFFF5722); // Warm electric papaya orange
+  static const Color accent = Color(0xFF00E5FF); // Electric cyan
 
-  // Background shades
-  static const Color background = Color(0xFF1A1A2E);
-  static const Color surface = Color(0xFF16213E);
-  static const Color cardColor = Color(0xFF0F3460);
+  // Background and surface tiers (Midnight oceanic depths)
+  static const Color background = Color(0xFF0A112C); // Canvas Base / Underlay
+  static const Color surface = Color(0xFF141B36); // Shelves, chat dock, leaderboard rail
+  static const Color cardColor = Color(0xFF1E284E); // Active cards, toolbars, modal containers
+  static const Color surfaceElevated = Color(0xFF222844); // High elevation surfaces
+  static const Color borderSubtle = Color(0xFF293664); // Crisp panel borders
 
-  // State colors
-  static const Color correct = Color(0xFF4CAF50);
-  static const Color wrong = Color(0xFFF44336);
-  static const Color warning = Color(0xFFFFB300);
+  // Game telemetry & state colors
+  static const Color correct = Color(0xFF00E676); // High-luminance emerald acierto
+  static const Color wrong = Color(0xFFFF1744); // Crisp crimson error / penalty
+  static const Color warning = Color(0xFFFFB300); // Amber warning / 15s timer
+  static const Color textMuted = Color(0xFF8E9ECA); // Subtitles, metadata, timestamps
 
   // Chat colors
-  static const Color systemMessage = Color(0xFF90CAF9);
-  static const Color correctGuessMessage = Color(0xFF69F0AE);
+  static const Color systemMessage = Color(0xFFFFC107);
+  static const Color correctGuessMessage = Color(0xFF00E676);
 
-  // Drawing palette
+  // Drawing palette (12 vibrant circular wells from Stitch design)
   static const List<Color> drawingColors = [
-    Color(0xFF000000), // Black
-    Color(0xFFFFFFFF), // White
-    Color(0xFFF44336), // Red
-    Color(0xFFFF9800), // Orange
-    Color(0xFFFFEB3B), // Yellow
-    Color(0xFF4CAF50), // Green
-    Color(0xFF2196F3), // Blue
-    Color(0xFF9C27B0), // Purple
-    Color(0xFF795548), // Brown
-    Color(0xFFE91E63), // Pink
-    Color(0xFF00BCD4), // Cyan
-    Color(0xFF607D8B), // Grey
+    Color(0xFF000000), // Negro azabache
+    Color(0xFFFFFFFF), // Blanco puro
+    Color(0xFFFF1744), // Rojo carmesí
+    Color(0xFFFF5722), // Naranja papaya
+    Color(0xFFFFC107), // Amarillo arepa
+    Color(0xFF00E676), // Verde esmeralda
+    Color(0xFF00E5FF), // Turquesa cian
+    Color(0xFF2979FF), // Azul rey
+    Color(0xFFD500F9), // Morado neón
+    Color(0xFFFF4081), // Rosa tropical
+    Color(0xFF8D6E63), // Marrón cacao
+    Color(0xFF455A64), // Gris pizarra
   ];
 
   // Timer colors
-  static const Color timerGreen = Color(0xFF4CAF50);
-  static const Color timerYellow = Color(0xFFFFB300);
-  static const Color timerRed = Color(0xFFF44336);
+  static const Color timerGreen = Color(0xFF00E676);
+  static const Color timerYellow = Color(0xFFFFC107);
+  static const Color timerRed = Color(0xFFFF1744);
 }
 
 /// Venezuelan-flavored system messages

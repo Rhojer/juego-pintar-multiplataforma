@@ -209,88 +209,149 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.background,
       body: Container(
         decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [AppColors.background, Color(0xFF0D1B3E)],
+          gradient: RadialGradient(
+            center: Alignment(0, -0.3),
+            radius: 1.2,
+            colors: [
+              Color(0xFF141B36),
+              AppColors.background,
+            ],
           ),
         ),
         child: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                children: [
-                  const SizedBox(height: 24),
-                  _buildFloatingTitle(),
-                  const SizedBox(height: 8),
-                  Text(
-                    '¡El juego de dibujo venezolano!',
-                    style: GoogleFonts.nunito(
-                      fontSize: 16,
-                      color: AppColors.secondary,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    textAlign: TextAlign.center,
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 580),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    children: [
+                      // Badge superior "Edición Fiesta Criolla"
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: AppColors.cardColor,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: AppColors.borderSubtle),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Text('★', style: TextStyle(color: AppColors.primary, fontSize: 12)),
+                            const SizedBox(width: 6),
+                            Text(
+                              'EDICIÓN FIESTA CRIOLLA',
+                              style: GoogleFonts.rubik(
+                                color: AppColors.primary,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 1.2,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            const Text('★', style: TextStyle(color: AppColors.primary, fontSize: 12)),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      _buildFloatingTitle(),
+                      const SizedBox(height: 6),
+                      Text(
+                        '¡El juego de dibujar, reírte y vacilar adivinando con tus panas!',
+                        style: GoogleFonts.nunitoSans(
+                          fontSize: 15,
+                          color: AppColors.textMuted,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 28),
+
+                      // Tarjeta Principal Táctil (Stitch Arcade Card 2.5D)
+                      Container(
+                        padding: const EdgeInsets.all(24),
+                        decoration: BoxDecoration(
+                          color: AppColors.surface,
+                          borderRadius: BorderRadius.circular(28),
+                          border: Border.all(color: AppColors.borderSubtle, width: 2),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Color(0xFF050C27),
+                              offset: Offset(0, 8),
+                              blurRadius: 0,
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          children: [
+                            _buildAvatarSelector(),
+                            const SizedBox(height: 24),
+                            _buildNicknameField(),
+                            const SizedBox(height: 20),
+                            if (_savedSession != null && _isConnecting) ...[
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                decoration: BoxDecoration(
+                                  color: AppColors.cardColor,
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(color: AppColors.primary),
+                                ),
+                                child: Row(
+                                  children: [
+                                    const SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: AppColors.primary,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Text(
+                                        'Reconectando a sala ${_savedSession!['roomCode']}...',
+                                        style: GoogleFonts.rubik(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                    ),
+                                    TextButton(
+                                      onPressed: _cancelReconnection,
+                                      child: Text(
+                                        'Cancelar',
+                                        style: GoogleFonts.nunitoSans(
+                                          color: Colors.white70,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                            ],
+                            _buildPlayButton(),
+                            const SizedBox(height: 16),
+                            Row(
+                              children: [
+                                Expanded(child: _buildPrivateButton()),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      _buildFooter(),
+                    ],
                   ),
-                  const SizedBox(height: 36),
-                  _buildAvatarSelector(),
-                  const SizedBox(height: 32),
-                  _buildNicknameField(),
-                  const SizedBox(height: 20),
-                  if (_savedSession != null && _isConnecting) ...[
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      decoration: BoxDecoration(
-                        color: AppColors.cardColor,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: AppColors.secondary),
-                      ),
-                      child: Row(
-                        children: [
-                          const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: AppColors.secondary,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              'Reconectando a sala ${_savedSession!['roomCode']}...',
-                              style: GoogleFonts.nunito(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ),
-                          TextButton(
-                            onPressed: _cancelReconnection,
-                            child: Text(
-                              'Cancelar',
-                              style: GoogleFonts.nunito(
-                                color: Colors.white70,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                  ],
-                  _buildPlayButton(),
-                  const SizedBox(height: 16),
-                  _buildPrivateButton(),
-                  const SizedBox(height: 40),
-                  _buildFooter(),
-                ],
+                ),
               ),
             ),
           ),
@@ -306,20 +367,44 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         offset: Offset(0, _floatAnim.value),
         child: child,
       ),
-      child: Column(
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
-            'Rayando',
-            style: GoogleFonts.nunito(
-              fontSize: 52,
+            'RAYANDO',
+            style: GoogleFonts.rubik(
+              fontSize: 48,
               fontWeight: FontWeight.w900,
-              foreground: Paint()
-                ..shader = const LinearGradient(
-                  colors: [AppColors.primary, AppColors.secondary],
-                ).createShader(const Rect.fromLTWH(0, 0, 300, 60)),
+              letterSpacing: -1,
+              color: AppColors.primary,
+              shadows: const [
+                Shadow(
+                  color: Color(0xFFC79100),
+                  offset: Offset(0, 4),
+                  blurRadius: 0,
+                ),
+              ],
             ),
           ),
-          const Text('🇻🇪', style: TextStyle(fontSize: 40)),
+          const SizedBox(width: 10),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(
+              color: AppColors.secondary,
+              borderRadius: BorderRadius.circular(8),
+              boxShadow: const [
+                BoxShadow(color: Color(0xFFB71C1C), offset: Offset(0, 2)),
+              ],
+            ),
+            child: Text(
+              '¡CHÉVERE!',
+              style: GoogleFonts.rubik(
+                fontSize: 11,
+                fontWeight: FontWeight.w900,
+                color: Colors.white,
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -330,58 +415,83 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
     return Column(
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              'Tu avatar: ',
-              style: GoogleFonts.nunito(
-                color: Colors.white70,
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
+        // Avatar grande destacado con halo 2.5D
+        Container(
+          width: 110,
+          height: 110,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: AppColors.cardColor,
+            border: Border.all(color: AppColors.primary, width: 3.5),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.primary.withOpacity(0.35),
+                blurRadius: 20,
+                spreadRadius: 2,
               ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: currentAvatar.color.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: currentAvatar.color, width: 1.5),
+              const BoxShadow(
+                color: Color(0xFF090D1C),
+                offset: Offset(0, 5),
+                blurRadius: 0,
               ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  ClipOval(
-                    child: Image.asset(
-                      currentAvatar.assetPath,
-                      width: 20,
-                      height: 20,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Text(currentAvatar.emoji, style: const TextStyle(fontSize: 16)),
-                    ),
+            ],
+          ),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              ClipOval(
+                child: Image.asset(
+                  currentAvatar.assetPath,
+                  width: 98,
+                  height: 98,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Text(
+                    currentAvatar.emoji,
+                    style: const TextStyle(fontSize: 48),
                   ),
-                  const SizedBox(width: 6),
-                  Text(
-                    currentAvatar.name,
-                    style: GoogleFonts.nunito(
-                      color: Colors.white,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ],
+                ),
               ),
-            ),
-          ],
+              Positioned(
+                bottom: 2,
+                right: 2,
+                child: Container(
+                  padding: const EdgeInsets.all(5),
+                  decoration: const BoxDecoration(
+                    color: AppColors.accent,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.brush_rounded, size: 13, color: Color(0xFF0A112C)),
+                ),
+              ),
+            ],
+          ),
         ),
         const SizedBox(height: 12),
+        Text(
+          currentAvatar.name,
+          style: GoogleFonts.rubik(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        Text(
+          currentAvatar.subtitle,
+          style: GoogleFonts.nunitoSans(
+            color: AppColors.textMuted,
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 16),
+        // Carrusel selector de miniaturas
         SizedBox(
-          height: 62,
+          height: 58,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             physics: const BouncingScrollPhysics(),
             itemCount: VzlaAvatars.all.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 10),
+            separatorBuilder: (_, __) => const SizedBox(width: 8),
             itemBuilder: (ctx, i) {
               final av = VzlaAvatars.all[i];
               final isSelected = av.id == _selectedAvatar;
@@ -391,22 +501,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   SessionStorage.saveAvatar(av.id);
                 },
                 child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  width: isSelected ? 56 : 46,
-                  height: isSelected ? 56 : 46,
+                  duration: const Duration(milliseconds: 180),
+                  width: isSelected ? 54 : 44,
+                  height: isSelected ? 54 : 44,
                   decoration: BoxDecoration(
-                    color: av.color,
+                    color: AppColors.cardColor,
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: isSelected ? Colors.white : Colors.white30,
+                      color: isSelected ? AppColors.primary : AppColors.borderSubtle,
                       width: isSelected ? 3 : 1.5,
                     ),
                     boxShadow: isSelected
                         ? [
                             BoxShadow(
-                              color: av.color.withOpacity(0.7),
-                              blurRadius: 12,
-                              spreadRadius: 2,
+                              color: AppColors.primary.withOpacity(0.5),
+                              blurRadius: 8,
                             ),
                           ]
                         : null,
@@ -414,14 +523,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   child: ClipOval(
                     child: Image.asset(
                       av.assetPath,
-                      width: isSelected ? 56 : 46,
-                      height: isSelected ? 56 : 46,
+                      width: isSelected ? 54 : 44,
+                      height: isSelected ? 54 : 44,
                       fit: BoxFit.cover,
                       errorBuilder: (_, __, ___) => Center(
                         child: Text(
                           av.emoji,
                           style: TextStyle(
-                            fontSize: isSelected ? 26 : 22,
+                            fontSize: isSelected ? 24 : 18,
                           ),
                         ),
                       ),
@@ -432,55 +541,108 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             },
           ),
         ),
-        const SizedBox(height: 6),
-        Text(
-          currentAvatar.subtitle,
-          style: GoogleFonts.nunito(
-            color: Colors.white54,
-            fontSize: 12,
-            fontStyle: FontStyle.italic,
+      ],
+    );
+  }
+
+  Widget _buildNicknameField() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Icon(Icons.badge_outlined, color: AppColors.accent, size: 18),
+            const SizedBox(width: 6),
+            Text(
+              '¿Cuál es tu apodo, pana?',
+              style: GoogleFonts.rubik(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+                fontSize: 14,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        TextFormField(
+          controller: _nicknameCtrl,
+          validator: _validateNickname,
+          maxLength: AppConstants.maxNicknameLength,
+          textCapitalization: TextCapitalization.words,
+          style: GoogleFonts.rubik(
+            color: Colors.white,
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+          ),
+          decoration: InputDecoration(
+            hintText: 'Ej. CheoElMecánico',
+            hintStyle: GoogleFonts.nunitoSans(color: AppColors.textMuted, fontSize: 14),
+            counterText: '',
+            filled: true,
+            fillColor: AppColors.background,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(9999),
+              borderSide: const BorderSide(color: AppColors.borderSubtle, width: 2),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(9999),
+              borderSide: const BorderSide(color: AppColors.accent, width: 2),
+            ),
+            prefixIcon: const Icon(Icons.person_rounded, color: AppColors.primary),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildNicknameField() {
-    return TextFormField(
-      controller: _nicknameCtrl,
-      validator: _validateNickname,
-      maxLength: AppConstants.maxNicknameLength,
-      textCapitalization: TextCapitalization.words,
-      style: const TextStyle(color: Colors.white, fontSize: 16),
-      decoration: InputDecoration(
-        hintText: '¿Cómo te llamas, pana?',
-        prefixIcon: const Icon(Icons.person_outline, color: AppColors.secondary),
-        counterText: '',
-        labelText: 'Apodo',
-      ),
-    );
-  }
-
   Widget _buildPlayButton() {
     return SizedBox(
       width: double.infinity,
-      height: 54,
-      child: ElevatedButton.icon(
-        onPressed: _isConnecting ? null : _joinPublic,
-        icon: _isConnecting
-            ? const SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-              )
-            : const Icon(Icons.play_arrow_rounded, size: 26),
-        label: Text(
-          _isConnecting ? 'Conectando...' : '¡Jugar!',
-          style: GoogleFonts.nunito(fontSize: 20, fontWeight: FontWeight.w800),
+      height: 58,
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(9999),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0xFFC79100),
+              offset: Offset(0, 5),
+              blurRadius: 0,
+            ),
+          ],
         ),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primary,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: ElevatedButton(
+          onPressed: _isConnecting ? null : _joinPublic,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.primary,
+            foregroundColor: const Color(0xFF0B1124),
+            elevation: 0,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9999)),
+          ),
+          child: _isConnecting
+              ? const SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(color: Color(0xFF0B1124), strokeWidth: 2.5),
+                )
+              : Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.play_arrow_rounded, size: 28, color: Color(0xFF0B1124)),
+                    const SizedBox(width: 8),
+                    Text(
+                      '¡JUGAR AHORA!',
+                      style: GoogleFonts.rubik(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0.5,
+                        color: const Color(0xFF0B1124),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    const Icon(Icons.bolt_rounded, size: 20, color: Color(0xFF0B1124)),
+                  ],
+                ),
         ),
       ),
     );
@@ -488,32 +650,62 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
   Widget _buildPrivateButton() {
     return SizedBox(
-      width: double.infinity,
-      height: 54,
-      child: OutlinedButton.icon(
-        onPressed: _isConnecting ? null : _showPrivateSheet,
-        icon: const Icon(Icons.lock_outline, color: AppColors.secondary),
-        label: Text(
-          '🔒 Sala privada',
-          style: GoogleFonts.nunito(
-            fontSize: 18,
-            fontWeight: FontWeight.w700,
-            color: AppColors.secondary,
-          ),
+      height: 48,
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(9999),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0xFF090D1C),
+              offset: Offset(0, 4),
+              blurRadius: 0,
+            ),
+          ],
         ),
-        style: OutlinedButton.styleFrom(
-          side: const BorderSide(color: AppColors.secondary, width: 2),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: ElevatedButton.icon(
+          onPressed: _isConnecting ? null : _showPrivateSheet,
+          icon: const Icon(Icons.lock_outline_rounded, size: 18, color: Colors.white),
+          label: Text(
+            'Crear o Unirse a Sala Privada',
+            style: GoogleFonts.rubik(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: Colors.white,
+            ),
+          ),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.cardColor,
+            elevation: 0,
+            side: const BorderSide(color: AppColors.borderSubtle, width: 2),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9999)),
+          ),
         ),
       ),
     );
   }
 
   Widget _buildFooter() {
-    return Text(
-      '¡Chévere pana! Mínimo ${AppConstants.minPlayers} jugadores para empezar.',
-      style: const TextStyle(color: Colors.white38, fontSize: 12),
-      textAlign: TextAlign.center,
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Container(
+          width: 8,
+          height: 8,
+          decoration: const BoxDecoration(
+            color: AppColors.correct,
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          'Partidas en vivo disponibles • Mínimo ${AppConstants.minPlayers} panas para empezar',
+          style: GoogleFonts.nunitoSans(
+            color: AppColors.textMuted,
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
     );
   }
 }
