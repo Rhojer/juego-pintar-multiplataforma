@@ -22,7 +22,9 @@ class AppColors {
 
   // Core brand accents
   static const Color primary = Color(0xFFFFC107); // Sunny golden yellow
+  static const Color primaryContainer = Color(0xFFFFC107);
   static const Color secondary = Color(0xFFFF5722); // Warm electric papaya orange
+  static const Color secondaryContainer = Color(0xFFD73B00); // Deep papaya red/orange
   static const Color accent = Color(0xFF00E5FF); // Electric cyan
 
   // Background and surface tiers (Midnight oceanic depths)
