@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../core/constants.dart';
 import '../models/game_state.dart';
+import '../models/player.dart';
 import '../models/special_mode.dart';
 import '../providers/game_provider.dart';
 import '../services/socket_service.dart';
@@ -133,6 +134,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
         gameState.offeredWords!.isNotEmpty;
 
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       backgroundColor: AppColors.background,
       body: SafeArea(
         child: Stack(
@@ -207,17 +209,25 @@ class _PortraitLayout extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final isDrawing = gameState.amIDrawing;
+
     return Column(
       children: [
-        // Canvas takes ~55% of the available height
+        // 1. Prominent Word Banner right above the canvas (unmissable on mobile!)
+        _GameWordBanner(gameState: gameState),
+
+        // 2. Canvas takes prioritized, stable height
+        // When drawing, drawer gets maximum drawing area (68%)
+        // When guessing, canvas takes 52% and chat 48%
         Expanded(
-          flex: 55,
-          child: DrawingCanvas(isDrawing: gameState.amIDrawing),
+          flex: isDrawing ? 68 : 52,
+          child: DrawingCanvas(isDrawing: isDrawing),
         ),
-        if (gameState.amIDrawing) const DrawingToolbar(),
-        // Chat takes the rest
+        if (isDrawing) const DrawingToolbar(),
+
+        // 3. Chat takes the remaining space
         Expanded(
-          flex: 45,
+          flex: isDrawing ? 32 : 48,
           child: ChatPanel(
             gameState: gameState,
             guessCtrl: guessCtrl,
@@ -252,9 +262,10 @@ class _LandscapeLayout extends ConsumerWidget {
       children: [
         // Canvas
         Expanded(
-          flex: 60,
+          flex: 62,
           child: Column(
             children: [
+              _GameWordBanner(gameState: gameState),
               Expanded(child: DrawingCanvas(isDrawing: gameState.amIDrawing)),
               if (gameState.amIDrawing) const DrawingToolbar(),
             ],
@@ -262,7 +273,7 @@ class _LandscapeLayout extends ConsumerWidget {
         ),
         // Chat panel
         SizedBox(
-          width: 280,
+          width: 300,
           child: ChatPanel(
             gameState: gameState,
             guessCtrl: guessCtrl,
@@ -294,143 +305,89 @@ class _TopBar extends ConsumerWidget {
             : AppColors.timerRed;
 
     return Container(
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: AppColors.surface,
-        border: const Border(bottom: BorderSide(color: AppColors.borderSubtle, width: 2)),
-        boxShadow: const [
+        border: Border(bottom: BorderSide(color: AppColors.borderSubtle, width: 2)),
+        boxShadow: [
           BoxShadow(
             color: Color(0xFF050C27),
-            offset: Offset(0, 4),
+            offset: Offset(0, 3),
             blurRadius: 0,
           ),
         ],
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       child: Row(
         children: [
-          // Logo Rayando con estilo arcade
+          // Logo Rayando
           Text(
             'RAYANDO',
             style: GoogleFonts.rubik(
-              fontSize: 16,
+              fontSize: 15,
               fontWeight: FontWeight.w900,
               color: AppColors.primary,
               letterSpacing: -0.5,
             ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 8),
           // Room code badge (tap to copy)
           if (gameState.roomCode.isNotEmpty)
-            Tooltip(
-              message: 'Toca para copiar código',
-              child: InkWell(
-                borderRadius: BorderRadius.circular(9999),
-                onTap: () {
-                  Clipboard.setData(ClipboardData(text: gameState.roomCode));
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('¡Código copiado! Pásaselo a tus panas.'),
-                      duration: Duration(seconds: 2),
-                      backgroundColor: AppColors.primary,
+            InkWell(
+              borderRadius: BorderRadius.circular(999),
+              onTap: () {
+                Clipboard.setData(ClipboardData(text: gameState.roomCode));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('¡Código copiado! Pásaselo a tus panas.'),
+                    duration: Duration(seconds: 2),
+                    backgroundColor: AppColors.primary,
+                  ),
+                );
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.cardColor,
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: AppColors.borderSubtle, width: 1.2),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      '#${gameState.roomCode}',
+                      style: GoogleFonts.rubik(
+                        color: AppColors.accent,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 11,
+                      ),
                     ),
-                  );
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: AppColors.cardColor,
-                    borderRadius: BorderRadius.circular(9999),
-                    border: Border.all(color: AppColors.borderSubtle, width: 1.5),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'SALA: ',
-                        style: GoogleFonts.rubik(
-                          color: AppColors.textMuted,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 11,
-                        ),
-                      ),
-                      Text(
-                        gameState.roomCode,
-                        style: GoogleFonts.rubik(
-                          color: AppColors.accent,
-                          fontWeight: FontWeight.w900,
-                          fontSize: 12,
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      const Icon(Icons.copy_rounded, color: AppColors.accent, size: 12),
-                    ],
-                  ),
+                    const SizedBox(width: 4),
+                    const Icon(Icons.copy_rounded, color: AppColors.accent, size: 11),
+                  ],
                 ),
               ),
             ),
-          const SizedBox(width: 8),
-          // Round info pill
+          const SizedBox(width: 6),
+          // Round pill
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
               color: AppColors.cardColor,
-              borderRadius: BorderRadius.circular(9999),
-              border: Border.all(color: AppColors.borderSubtle, width: 1.5),
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(color: AppColors.borderSubtle, width: 1.2),
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.refresh_rounded, size: 12, color: AppColors.secondary),
-                const SizedBox(width: 4),
-                Text(
-                  'Ronda ${gameState.currentRound}/${gameState.totalRounds}',
-                  style: GoogleFonts.rubik(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 11,
-                  ),
-                ),
-              ],
+            child: Text(
+              'R ${gameState.currentRound}/${gameState.totalRounds}',
+              style: GoogleFonts.rubik(
+                color: Colors.white,
+                fontWeight: FontWeight.w800,
+                fontSize: 11,
+              ),
             ),
           ),
-          if (gameState.specialMode != null) ...[
-            const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(
-                color: gameState.specialMode!.badgeColor.withOpacity(0.18),
-                borderRadius: BorderRadius.circular(9999),
-                border: Border.all(color: gameState.specialMode!.badgeColor, width: 1.8),
-                boxShadow: [
-                  BoxShadow(
-                    color: gameState.specialMode!.badgeColor.withOpacity(0.3),
-                    blurRadius: 6,
-                  ),
-                ],
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(gameState.specialMode!.emoji, style: const TextStyle(fontSize: 13)),
-                  const SizedBox(width: 5),
-                  Text(
-                    gameState.specialMode!.name.toUpperCase(),
-                    style: GoogleFonts.rubik(
-                      color: gameState.specialMode!.badgeColor,
-                      fontWeight: FontWeight.w900,
-                      fontSize: 10,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-          const SizedBox(width: 12),
-          // Word / hint area
-          Expanded(child: _WordDisplay(gameState: gameState)),
-          const SizedBox(width: 10),
-          // Radial Circular Timer
+          const Spacer(),
+          // Timer Widget
           _TimerWidget(seconds: timer, color: timerColor),
         ],
       ),
@@ -438,139 +395,222 @@ class _TopBar extends ConsumerWidget {
   }
 }
 
-class _WordDisplay extends StatelessWidget {
-  const _WordDisplay({required this.gameState});
+class _GameWordBanner extends StatelessWidget {
+  const _GameWordBanner({required this.gameState});
   final GameState gameState;
 
   @override
   Widget build(BuildContext context) {
     final mode = gameState.specialMode;
+    final isDrawing = gameState.amIDrawing;
 
-    // 1. Drawer is choosing words
-    if (gameState.isChoosingWord) {
-      if (gameState.amIDrawing) {
-        return Column(
-          children: [
-            Text(
-              mode != null ? '${mode.emoji} ¡${mode.name.toUpperCase()}!' : '¡Te toca dibujar!',
-              style: GoogleFonts.nunito(
-                color: mode != null ? mode.badgeColor : AppColors.secondary,
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
+    if (isDrawing) {
+      if (gameState.isChoosingWord) {
+        return Container(
+          margin: const EdgeInsets.fromLTRB(10, 6, 10, 2),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+          decoration: BoxDecoration(
+            color: AppColors.secondaryContainer,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: AppColors.secondary, width: 1.5),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text('🎨', style: TextStyle(fontSize: 16)),
+              const SizedBox(width: 8),
+              Text(
+                '¡TE TOCA DIBUJAR! ELIGE UNA PALABRA',
+                style: GoogleFonts.rubik(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 12,
+                  letterSpacing: 0.5,
+                ),
               ),
-            ),
-            Text(
-              'ELIGE TU PALABRA',
-              style: GoogleFonts.nunito(
-                color: Colors.white,
-                fontSize: 15,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 1.2,
-              ),
-              textAlign: TextAlign.center,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
-        );
-      } else {
-        return Column(
-          children: [
-            Text(
-              mode != null
-                  ? '${mode.emoji} Turno de ${gameState.currentDrawerNickname} (${mode.name})'
-                  : 'Turno de ${gameState.currentDrawerNickname}',
-              style: GoogleFonts.nunito(color: Colors.white54, fontSize: 11),
-              overflow: TextOverflow.ellipsis,
-            ),
-            Text(
-              'Eligiendo palabra...',
-              style: GoogleFonts.nunito(
-                color: mode != null ? mode.badgeColor : AppColors.secondary,
-                fontSize: 14,
-                fontWeight: FontWeight.w800,
-                fontStyle: FontStyle.italic,
-              ),
-              textAlign: TextAlign.center,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
+            ],
+          ),
         );
       }
-    }
 
-    // 2. Normal drawing phase: drawer sees full word
-    if (gameState.amIDrawing && gameState.currentWord != null) {
-      final showOriginal = mode != null &&
-          gameState.originalWord != null &&
-          gameState.originalWord!.toLowerCase() != gameState.currentWord!.toLowerCase();
+      final word = gameState.currentWord ?? '';
+      final originalWord = gameState.originalWord;
+      final hasOriginal = mode != null &&
+          originalWord != null &&
+          originalWord.isNotEmpty &&
+          originalWord.toLowerCase() != word.toLowerCase();
 
-      return Column(
-        children: [
-          Text(
-            mode != null
-                ? '${mode.emoji} ¡Dibuja en ${mode.name}!'
-                : '¡Dibuja esto!',
-            style: GoogleFonts.nunito(
-              color: mode != null ? mode.badgeColor : Colors.white54,
-              fontSize: 11,
-              fontWeight: mode != null ? FontWeight.w700 : FontWeight.normal,
-            ),
+      return Container(
+        margin: const EdgeInsets.fromLTRB(10, 6, 10, 2),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: mode != null
+                ? [mode.badgeColor.withOpacity(0.35), AppColors.surface]
+                : [AppColors.secondaryContainer, AppColors.surface],
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
           ),
-          Text(
-            gameState.currentWord!.toUpperCase(),
-            style: GoogleFonts.nunito(
-              color: mode != null ? mode.badgeColor : AppColors.secondary,
-              fontSize: 18,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 1,
-            ),
-            textAlign: TextAlign.center,
-            overflow: TextOverflow.ellipsis,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: mode != null ? mode.badgeColor : AppColors.primary,
+            width: 1.8,
           ),
-          if (showOriginal)
-            Text(
-              '(Dibujas: ${gameState.originalWord!.toUpperCase()})',
-              style: GoogleFonts.nunito(
-                color: Colors.white70,
-                fontSize: 11,
-                fontWeight: FontWeight.w800,
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0xFF050C27),
+              offset: Offset(0, 2),
+              blurRadius: 0,
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: mode != null ? mode.badgeColor : AppColors.primary,
+                borderRadius: BorderRadius.circular(8),
               ),
-              textAlign: TextAlign.center,
-              overflow: TextOverflow.ellipsis,
+              child: Text(
+                '🎨 TU PALABRA',
+                style: GoogleFonts.rubik(
+                  color: mode != null ? mode.textColor : const Color(0xFF050C27),
+                  fontWeight: FontWeight.w900,
+                  fontSize: 10,
+                  letterSpacing: 0.5,
+                ),
+              ),
             ),
-        ],
+            const SizedBox(width: 10),
+            Expanded(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Row(
+                  children: [
+                    Text(
+                      word.isNotEmpty ? word.toUpperCase() : '...',
+                      style: GoogleFonts.rubik(
+                        color: AppColors.accent,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 18,
+                        letterSpacing: 1.5,
+                      ),
+                    ),
+                    if (hasOriginal) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.black26,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          '(Dibuja: ${originalWord.toUpperCase()})',
+                          style: GoogleFonts.rubik(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+            if (mode != null)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: mode.badgeColor.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: mode.badgeColor, width: 1),
+                ),
+                child: Text(
+                  '${mode.emoji} ${mode.name}',
+                  style: GoogleFonts.rubik(
+                    color: mode.badgeColor,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      );
+    } else {
+      // Guesser view: shows drawer nickname and word hint
+      final hint = gameState.wordHint ?? '';
+      final drawer = gameState.currentDrawerNickname;
+
+      return Container(
+        margin: const EdgeInsets.fromLTRB(10, 6, 10, 2),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: mode != null ? mode.badgeColor.withOpacity(0.6) : AppColors.borderSubtle,
+            width: 1.5,
+          ),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.brush_rounded, size: 14, color: AppColors.primary),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                drawer.isNotEmpty ? '$drawer dibuja' : 'Dibujando...',
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.rubik(
+                  color: Colors.white70,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(width: 1, height: 14, color: AppColors.borderSubtle),
+            const SizedBox(width: 8),
+            Expanded(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.center,
+                child: Text(
+                  hint.isNotEmpty
+                      ? '$hint  (${gameState.wordLength} letras)'
+                      : '${gameState.wordLength} LETRAS',
+                  style: GoogleFonts.rubik(
+                    color: AppColors.accent,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 14,
+                    letterSpacing: 2.0,
+                  ),
+                ),
+              ),
+            ),
+            if (mode != null)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: mode.badgeColor.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  '${mode.emoji} ${mode.name}',
+                  style: GoogleFonts.rubik(
+                    color: mode.badgeColor,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+          ],
+        ),
       );
     }
-
-    // 3. Guesser sees hint / dashes
-    final hint = gameState.wordHint;
-    final len = gameState.wordLength;
-
-    return Column(
-      children: [
-        Text(
-          mode != null
-              ? '${mode.emoji} ${gameState.currentDrawerNickname} dibuja (${mode.name})'
-              : '${gameState.currentDrawerNickname} está dibujando',
-          style: GoogleFonts.nunito(
-            color: mode != null ? mode.badgeColor : Colors.white54,
-            fontSize: 11,
-            fontWeight: mode != null ? FontWeight.w700 : FontWeight.normal,
-          ),
-          overflow: TextOverflow.ellipsis,
-        ),
-        Text(
-          hint ?? List.generate(len, (_) => '_ ').join().trim(),
-          style: GoogleFonts.nunito(
-            color: Colors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 3,
-          ),
-          textAlign: TextAlign.center,
-        ),
-      ],
-    );
   }
 }
 
@@ -643,7 +683,7 @@ class DrawingCanvas extends ConsumerWidget {
 
     return Center(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+        padding: const EdgeInsets.symmetric(horizontal: 6.0, vertical: 4.0),
         child: AspectRatio(
           aspectRatio: 4 / 3,
           child: Container(
@@ -1325,8 +1365,9 @@ class _GuessInput extends StatelessWidget {
       hintText = '¡Escribe tu respuesta aquí...! 🚀';
     }
 
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      padding: EdgeInsets.fromLTRB(10, 8, 10, 8 + bottomInset),
       decoration: BoxDecoration(
         color: AppColors.surface,
         border: const Border(top: BorderSide(color: AppColors.borderSubtle, width: 1.5)),
@@ -2139,6 +2180,7 @@ class _TurnEndScoreboardOverlayState extends State<_TurnEndScoreboardOverlay>
                                       // 2nd Place (Left)
                                       if (top3.length > 1)
                                         Expanded(
+                                          flex: 10,
                                           child: _buildPodiumSlot(
                                             rank: 2,
                                             player: top3[1],
@@ -2167,6 +2209,7 @@ class _TurnEndScoreboardOverlayState extends State<_TurnEndScoreboardOverlay>
                                       // 3rd Place (Right)
                                       if (top3.length > 2)
                                         Expanded(
+                                          flex: 10,
                                           child: _buildPodiumSlot(
                                             rank: 3,
                                             player: top3[2],
