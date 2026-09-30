@@ -1757,19 +1757,25 @@ class _TurnEndScoreboardOverlayState extends State<_TurnEndScoreboardOverlay>
         originalWord.toLowerCase() != revealedWord.toLowerCase();
 
     final drawerNickname = gameState.currentDrawerNickname;
-    final drawerPlayer = gameState.players.cast<Player?>().firstWhere(
-      (p) => p?.nickname == drawerNickname || p?.isDrawing == true,
-      orElse: () => null,
-    );
+    Player? drawerPlayer;
+    for (final p in gameState.players) {
+      if (p.nickname == drawerNickname || p.isDrawing) {
+        drawerPlayer = p;
+        break;
+      }
+    }
     final drawerAvatar = drawerPlayer?.avatar ?? 'arepa';
 
     final nonDrawers = sortedPlayers.where((p) => p.nickname != drawerNickname && !p.isDrawing).toList();
     final allGuessed = nonDrawers.isNotEmpty && nonDrawers.every((p) => p.hasGuessed);
 
-    final myPlayer = sortedPlayers.cast<Player?>().firstWhere(
-      (p) => p?.id == gameState.myId,
-      orElse: () => null,
-    );
+    Player? myPlayer;
+    for (final p in sortedPlayers) {
+      if (p.id == gameState.myId) {
+        myPlayer = p;
+        break;
+      }
+    }
     final myPointsGained = myPlayer?.pointsGained ?? 0;
     final isMeDrawer = myPlayer != null && (myPlayer.nickname == drawerNickname || myPlayer.isDrawing);
 
@@ -2386,13 +2392,13 @@ class _TurnEndScoreboardOverlayState extends State<_TurnEndScoreboardOverlay>
 
   static Widget _buildPodiumSlot({
     required int rank,
-    required dynamic player,
+    required Player player,
     required Color color,
     required bool isCenter,
     required String myId,
   }) {
     final isMe = player.id == myId;
-    final pointsGained = player.pointsGained as int? ?? 0;
+    final pointsGained = player.pointsGained;
 
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 6, vertical: isCenter ? 10 : 8),
