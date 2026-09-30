@@ -366,6 +366,7 @@ class GameNotifier extends Notifier<GameState?> {
 
     final word = data['word'] as String? ?? '';
     final originalWord = data['originalWord'] as String?;
+    final drawerNickname = data['drawerNickname'] as String? ?? current.currentDrawerNickname;
     final rawPlayers = data['players'];
     final players = rawPlayers != null ? _parsePlayers(rawPlayers) : current.players;
 
@@ -380,9 +381,10 @@ class GameNotifier extends Notifier<GameState?> {
       status: GameStatus.playing,
       showTurnEndOverlay: true,
       lastWord: word,
+      originalWord: originalWord,
+      currentDrawerNickname: drawerNickname,
       players: players,
       clearCurrentWord: true,
-      clearOriginalWord: true,
       clearOfferedWords: true,
       clearOfferedWordDetails: true,
       specialMode: specialMode,

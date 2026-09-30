@@ -1695,371 +1695,685 @@ class _WordSelectionOverlay extends ConsumerWidget {
   }
 }
 
-class _TurnEndScoreboardOverlay extends StatelessWidget {
+class _TurnEndScoreboardOverlay extends StatefulWidget {
   const _TurnEndScoreboardOverlay({required this.gameState});
 
   final GameState gameState;
 
   @override
+  State<_TurnEndScoreboardOverlay> createState() => _TurnEndScoreboardOverlayState();
+}
+
+class _TurnEndScoreboardOverlayState extends State<_TurnEndScoreboardOverlay>
+    with TickerProviderStateMixin {
+  late final AnimationController _entranceCtrl;
+  late final Animation<double> _scaleAnim;
+  late final Animation<double> _fadeAnim;
+  late final AnimationController _timerCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _entranceCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 450),
+    );
+    _scaleAnim = CurvedAnimation(
+      parent: _entranceCtrl,
+      curve: Curves.easeOutBack,
+    );
+    _fadeAnim = CurvedAnimation(
+      parent: _entranceCtrl,
+      curve: Curves.easeOut,
+    );
+    _entranceCtrl.forward();
+
+    // 5-second countdown timer matching server pause before next turn
+    _timerCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 5),
+    )..forward();
+  }
+
+  @override
+  void dispose() {
+    _entranceCtrl.dispose();
+    _timerCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final gameState = widget.gameState;
     final sortedPlayers = [...gameState.players]
       ..sort((a, b) => b.score.compareTo(a.score));
 
-    final revealedWord = gameState.currentWord?.trim();
+    final revealedWord = (gameState.lastWord ?? gameState.currentWord ?? '').trim();
+    final originalWord = gameState.originalWord?.trim();
+    final specialMode = gameState.specialMode;
+    final hasSpecialMode = specialMode != null;
+    final hasDifferentOriginal = originalWord != null &&
+        originalWord.isNotEmpty &&
+        originalWord.toLowerCase() != revealedWord.toLowerCase();
+
+    final drawerNickname = gameState.currentDrawerNickname;
+    final drawerPlayer = gameState.players.cast<Player?>().firstWhere(
+      (p) => p?.nickname == drawerNickname || p?.isDrawing == true,
+      orElse: () => null,
+    );
+    final drawerAvatar = drawerPlayer?.avatar ?? 'arepa';
+
+    final nonDrawers = sortedPlayers.where((p) => p.nickname != drawerNickname && !p.isDrawing).toList();
+    final allGuessed = nonDrawers.isNotEmpty && nonDrawers.every((p) => p.hasGuessed);
+
+    final myPlayer = sortedPlayers.cast<Player?>().firstWhere(
+      (p) => p?.id == gameState.myId,
+      orElse: () => null,
+    );
+    final myPointsGained = myPlayer?.pointsGained ?? 0;
+    final isMeDrawer = myPlayer != null && (myPlayer.nickname == drawerNickname || myPlayer.isDrawing);
+
     final top3 = sortedPlayers.take(3).toList();
+    final otherPlayers = sortedPlayers.length > 3 ? sortedPlayers.sublist(3) : <Player>[];
+
+    final screenHeight = MediaQuery.of(context).size.height;
 
     return Positioned.fill(
       child: BackdropFilter(
-        filter: ui.ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+        filter: ui.ImageFilter.blur(sigmaX: 14, sigmaY: 14),
         child: Container(
-          color: const Color(0xFF0A112C).withOpacity(0.88),
+          color: const Color(0xFF070C1E).withOpacity(0.90),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
           child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 480, maxHeight: 720),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(26),
-                  border: Border.all(color: AppColors.borderSubtle, width: 2),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Color(0xFF050C27),
-                      offset: Offset(0, 10),
-                      blurRadius: 0,
+            child: FadeTransition(
+              opacity: _fadeAnim,
+              child: ScaleTransition(
+                scale: _scaleAnim,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: 500,
+                    maxHeight: screenHeight * 0.90,
+                  ),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(28),
+                      border: Border.all(
+                        color: hasSpecialMode
+                            ? specialMode.badgeColor.withOpacity(0.7)
+                            : (allGuessed ? AppColors.correct.withOpacity(0.6) : AppColors.borderSubtle),
+                        width: 2,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: hasSpecialMode
+                              ? specialMode.badgeColor.withOpacity(0.18)
+                              : const Color(0xFF030716).withOpacity(0.8),
+                          offset: const Offset(0, 10),
+                          blurRadius: 24,
+                          spreadRadius: 2,
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-                padding: const EdgeInsets.all(20),
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // 1. Badge & Title
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: AppColors.secondaryContainer,
-                          borderRadius: BorderRadius.circular(9999),
-                        ),
-                        child: Text(
-                          '🎉 ¡FIEBRE CRIOLLA! 🎺',
-                          style: GoogleFonts.rubik(
-                            color: Colors.white,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        '¡RONDA ${gameState.currentRound} TERMINADA!',
-                        style: GoogleFonts.rubik(
-                          color: AppColors.primary,
-                          fontSize: 22,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: -0.5,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Todos los panas ya soltaron el lápiz y adivinaron en esta vuelta.',
-                        style: GoogleFonts.nunitoSans(
-                          color: AppColors.textMuted,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 12),
-
-                      // 2. Word reveal pill
-                      if (revealedWord != null && revealedWord.isNotEmpty) ...[
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: AppColors.cardColor,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: AppColors.primary.withOpacity(0.6), width: 1.5),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.lightbulb_rounded, color: AppColors.primary, size: 16),
-                              const SizedBox(width: 8),
-                              Text(
-                                'La palabra era: ',
-                                style: GoogleFonts.nunitoSans(
-                                  color: AppColors.textMuted,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              Text(
-                                revealedWord.toUpperCase(),
-                                style: GoogleFonts.rubik(
-                                  color: AppColors.accent,
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w900,
-                                  letterSpacing: 1,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                      ],
-
-                      // 3. Podio de la Ronda (Top 3)
-                      if (top3.isNotEmpty) ...[
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              '🏆 Podio de la Ronda',
-                              style: GoogleFonts.rubik(
-                                color: Colors.white,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: AppColors.cardColor,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Text(
-                                'Puntos acumulados',
-                                style: GoogleFonts.nunitoSans(
-                                  color: AppColors.accent,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            // 2nd Place (Left)
-                            if (top3.length > 1)
-                              Expanded(
-                                child: _buildPodiumSlot(
-                                  rank: 2,
-                                  player: top3[1],
-                                  color: const Color(0xFF8E9ECA),
-                                  isCenter: false,
-                                  myId: gameState.myId,
-                                ),
-                              )
-                            else
-                              const Spacer(),
-                            const SizedBox(width: 8),
-
-                            // 1st Place (Center - Highest)
-                            Expanded(
-                              flex: 12,
-                              child: _buildPodiumSlot(
-                                rank: 1,
-                                player: top3[0],
-                                color: AppColors.primary,
-                                isCenter: true,
-                                myId: gameState.myId,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-
-                            // 3rd Place (Right)
-                            if (top3.length > 2)
-                              Expanded(
-                                child: _buildPodiumSlot(
-                                  rank: 3,
-                                  player: top3[2],
-                                  color: AppColors.secondary,
-                                  isCenter: false,
-                                  myId: gameState.myId,
-                                ),
-                              )
-                            else
-                              const Spacer(),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                      ],
-
-                      // 4. Posiciones Generales
-                      Row(
-                        children: [
-                          const Icon(Icons.format_list_numbered_rounded, color: AppColors.accent, size: 16),
-                          const SizedBox(width: 6),
-                          Text(
-                            'Posiciones Generales (${sortedPlayers.length} Panas)',
-                            style: GoogleFonts.rubik(
-                              color: Colors.white,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      ListView.separated(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: sortedPlayers.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 6),
-                        itemBuilder: (context, index) {
-                          final player = sortedPlayers[index];
-                          final isMe = player.id == gameState.myId;
-                          final pointsGained = player.pointsGained;
-
-                          return Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-                            decoration: BoxDecoration(
-                              color: isMe
-                                  ? AppColors.accent.withOpacity(0.12)
-                                  : AppColors.cardColor.withOpacity(0.6),
-                              borderRadius: BorderRadius.circular(14),
-                              border: Border.all(
-                                color: isMe
-                                    ? AppColors.accent
-                                    : AppColors.borderSubtle.withOpacity(0.5),
-                                width: isMe ? 1.5 : 1,
-                              ),
-                            ),
-                            child: Row(
+                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Scrollable content area
+                        Flexible(
+                          child: SingleChildScrollView(
+                            physics: const BouncingScrollPhysics(),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
                               children: [
-                                Container(
-                                  width: 24,
-                                  height: 24,
-                                  decoration: BoxDecoration(
-                                    color: index == 0
-                                        ? AppColors.primary
-                                        : index == 1
-                                            ? const Color(0xFF8E9ECA)
-                                            : index == 2
-                                                ? AppColors.secondary
-                                                : AppColors.surfaceElevated,
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: Center(
-                                    child: Text(
-                                      '${index + 1}',
-                                      style: GoogleFonts.rubik(
-                                        color: index <= 2 ? const Color(0xFF0B1124) : Colors.white,
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w900,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                PlayerAvatar(
-                                  nickname: player.nickname,
-                                  avatar: player.avatar,
-                                  size: 28,
-                                  score: null,
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Row(
-                                    children: [
-                                      Flexible(
-                                        child: Text(
-                                          player.nickname,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: GoogleFonts.nunitoSans(
-                                            color: Colors.white,
-                                            fontWeight: isMe ? FontWeight.w800 : FontWeight.w700,
-                                            fontSize: 13,
-                                          ),
+                                // 1. Header Round & Status
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.cardColor,
+                                        borderRadius: BorderRadius.circular(999),
+                                        border: Border.all(
+                                          color: AppColors.borderSubtle.withOpacity(0.6),
                                         ),
                                       ),
-                                      if (isMe) ...[
-                                        const SizedBox(width: 6),
+                                      child: Text(
+                                        'RONDA ${gameState.currentRound} DE ${gameState.totalRounds}',
+                                        style: GoogleFonts.rubik(
+                                          color: AppColors.textMuted,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w800,
+                                          letterSpacing: 0.8,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  allGuessed
+                                      ? '¡TODOS ADIVINARON A TIEMPO! ⚡'
+                                      : '¡SE ACABÓ EL TIEMPO! ⏰',
+                                  textAlign: TextAlign.center,
+                                  style: GoogleFonts.rubik(
+                                    color: allGuessed ? AppColors.correct : AppColors.primary,
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.w900,
+                                    letterSpacing: -0.5,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  allGuessed
+                                      ? '¡Qué nivel tienen estos panas! Nadie se quedó atrás en esta vuelta.'
+                                      : 'El reloj llegó a cero antes de que todos pudieran adivinar.',
+                                  textAlign: TextAlign.center,
+                                  style: GoogleFonts.nunitoSans(
+                                    color: AppColors.textMuted,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(height: 14),
+
+                                // 2. Word Reveal Card (Hero Section)
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: hasSpecialMode
+                                          ? [
+                                              specialMode.badgeColor.withOpacity(0.22),
+                                              AppColors.cardColor,
+                                            ]
+                                          : [
+                                              AppColors.cardColor,
+                                              AppColors.cardColor.withOpacity(0.8),
+                                            ],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                    ),
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(
+                                      color: hasSpecialMode
+                                          ? specialMode.badgeColor.withOpacity(0.8)
+                                          : AppColors.primary.withOpacity(0.6),
+                                      width: 1.8,
+                                    ),
+                                  ),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      if (hasSpecialMode) ...[
                                         Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
                                           decoration: BoxDecoration(
-                                            color: AppColors.accent,
-                                            borderRadius: BorderRadius.circular(6),
+                                            color: specialMode.badgeColor,
+                                            borderRadius: BorderRadius.circular(999),
                                           ),
                                           child: Text(
-                                            'TÚ',
+                                            '${specialMode.emoji} MODO ${specialMode.name.toUpperCase()}',
                                             style: GoogleFonts.rubik(
-                                              color: const Color(0xFF0B1124),
-                                              fontSize: 9,
+                                              color: specialMode.textColor,
+                                              fontSize: 11,
                                               fontWeight: FontWeight.w900,
+                                              letterSpacing: 0.5,
                                             ),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                      ],
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Icon(
+                                            Icons.lightbulb_rounded,
+                                            color: hasSpecialMode ? specialMode.badgeColor : AppColors.primary,
+                                            size: 18,
+                                          ),
+                                          const SizedBox(width: 6),
+                                          Text(
+                                            'LA PALABRA ERA:',
+                                            style: GoogleFonts.rubik(
+                                              color: AppColors.textMuted,
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w800,
+                                              letterSpacing: 1.0,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 6),
+                                      SelectableText(
+                                        revealedWord.isNotEmpty ? revealedWord.toUpperCase() : '???',
+                                        textAlign: TextAlign.center,
+                                        style: GoogleFonts.rubik(
+                                          color: hasSpecialMode ? Colors.white : AppColors.accent,
+                                          fontSize: 26,
+                                          fontWeight: FontWeight.w900,
+                                          letterSpacing: 2.0,
+                                          shadows: [
+                                            Shadow(
+                                              color: (hasSpecialMode ? specialMode.badgeColor : AppColors.accent).withOpacity(0.4),
+                                              blurRadius: 10,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      if (hasSpecialMode && hasDifferentOriginal) ...[
+                                        const SizedBox(height: 6),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                          decoration: BoxDecoration(
+                                            color: Colors.black.withOpacity(0.25),
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              const Text('🎨 ', style: TextStyle(fontSize: 12)),
+                                              Text(
+                                                'Dibujo original: ',
+                                                style: GoogleFonts.nunitoSans(
+                                                  color: Colors.white70,
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                              Text(
+                                                originalWord.toUpperCase(),
+                                                style: GoogleFonts.rubik(
+                                                  color: AppColors.primary,
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w900,
+                                                  letterSpacing: 0.5,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                      if (drawerNickname.isNotEmpty) ...[
+                                        const SizedBox(height: 10),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                          decoration: BoxDecoration(
+                                            color: AppColors.surfaceElevated.withOpacity(0.7),
+                                            borderRadius: BorderRadius.circular(999),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              PlayerAvatar(
+                                                nickname: drawerNickname,
+                                                avatar: drawerAvatar,
+                                                size: 18,
+                                                score: null,
+                                              ),
+                                              const SizedBox(width: 6),
+                                              Text(
+                                                'Dibujado por ',
+                                                style: GoogleFonts.nunitoSans(
+                                                  color: AppColors.textMuted,
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                              Flexible(
+                                                child: Text(
+                                                  drawerNickname,
+                                                  overflow: TextOverflow.ellipsis,
+                                                  style: GoogleFonts.rubik(
+                                                    color: Colors.white,
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.w800,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
                                           ),
                                         ),
                                       ],
                                     ],
                                   ),
                                 ),
-                                if (pointsGained > 0)
+                                const SizedBox(height: 12),
+
+                                // 3. User Points Gained Banner (if earned points)
+                                if (myPointsGained > 0) ...[
                                   Container(
-                                    margin: const EdgeInsets.only(right: 8),
-                                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                    width: double.infinity,
+                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                                     decoration: BoxDecoration(
-                                      color: AppColors.correct.withOpacity(0.2),
-                                      borderRadius: BorderRadius.circular(9999),
-                                      border: Border.all(color: AppColors.correct, width: 1),
+                                      color: AppColors.correct.withOpacity(0.18),
+                                      borderRadius: BorderRadius.circular(14),
+                                      border: Border.all(color: AppColors.correct, width: 1.2),
                                     ),
-                                    child: Text(
-                                      '+$pointsGained',
-                                      style: GoogleFonts.rubik(
-                                        color: AppColors.correct,
-                                        fontWeight: FontWeight.w800,
-                                        fontSize: 11,
-                                      ),
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        const Text('🎉 ', style: TextStyle(fontSize: 14)),
+                                        Text(
+                                          '¡Sumaste +$myPointsGained pts este turno!',
+                                          style: GoogleFonts.rubik(
+                                            color: AppColors.correct,
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w800,
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
-                                Text(
-                                  '${player.score} pts',
-                                  style: GoogleFonts.rubik(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w800,
-                                    fontSize: 13,
+                                  const SizedBox(height: 12),
+                                ] else if (isMeDrawer) ...[
+                                  Container(
+                                    width: double.infinity,
+                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.accent.withOpacity(0.12),
+                                      borderRadius: BorderRadius.circular(14),
+                                      border: Border.all(color: AppColors.accent.withOpacity(0.5), width: 1.2),
+                                    ),
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        const Text('🎨 ', style: TextStyle(fontSize: 14)),
+                                        Text(
+                                          '¡Fuiste el dibujante este turno!',
+                                          style: GoogleFonts.rubik(
+                                            color: AppColors.accent,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w800,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                ],
+
+                                // 4. Podio de la Ronda (Top 3)
+                                if (top3.isNotEmpty) ...[
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        '🏆 Podio de la Partida',
+                                        style: GoogleFonts.rubik(
+                                          color: Colors.white,
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w800,
+                                        ),
+                                      ),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.cardColor,
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: Text(
+                                          'Puntos acumulados',
+                                          style: GoogleFonts.nunitoSans(
+                                            color: AppColors.accent,
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    children: [
+                                      // 2nd Place (Left)
+                                      if (top3.length > 1)
+                                        Expanded(
+                                          child: _buildPodiumSlot(
+                                            rank: 2,
+                                            player: top3[1],
+                                            color: const Color(0xFF8E9ECA),
+                                            isCenter: false,
+                                            myId: gameState.myId,
+                                          ),
+                                        )
+                                      else
+                                        const Spacer(),
+                                      const SizedBox(width: 8),
+
+                                      // 1st Place (Center - Highest)
+                                      Expanded(
+                                        flex: 12,
+                                        child: _buildPodiumSlot(
+                                          rank: 1,
+                                          player: top3[0],
+                                          color: AppColors.primary,
+                                          isCenter: true,
+                                          myId: gameState.myId,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+
+                                      // 3rd Place (Right)
+                                      if (top3.length > 2)
+                                        Expanded(
+                                          child: _buildPodiumSlot(
+                                            rank: 3,
+                                            player: top3[2],
+                                            color: AppColors.secondary,
+                                            isCenter: false,
+                                            myId: gameState.myId,
+                                          ),
+                                        )
+                                      else
+                                        const Spacer(),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 14),
+                                ],
+
+                                // 5. Posiciones siguientes (4º en adelante, si existen)
+                                if (otherPlayers.isNotEmpty) ...[
+                                  Row(
+                                    children: [
+                                      const Icon(Icons.format_list_numbered_rounded, color: AppColors.accent, size: 15),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        'Otras Posiciones (${otherPlayers.length})',
+                                        style: GoogleFonts.rubik(
+                                          color: Colors.white,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w800,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  ListView.separated(
+                                    shrinkWrap: true,
+                                    physics: const NeverScrollableScrollPhysics(),
+                                    itemCount: otherPlayers.length,
+                                    separatorBuilder: (_, __) => const SizedBox(height: 6),
+                                    itemBuilder: (context, index) {
+                                      final player = otherPlayers[index];
+                                      final rank = index + 4;
+                                      final isMe = player.id == gameState.myId;
+                                      final pointsGained = player.pointsGained;
+
+                                      return Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                        decoration: BoxDecoration(
+                                          color: isMe
+                                              ? AppColors.accent.withOpacity(0.12)
+                                              : AppColors.cardColor.withOpacity(0.6),
+                                          borderRadius: BorderRadius.circular(12),
+                                          border: Border.all(
+                                            color: isMe
+                                                ? AppColors.accent
+                                                : AppColors.borderSubtle.withOpacity(0.5),
+                                            width: isMe ? 1.5 : 1,
+                                          ),
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            Container(
+                                              width: 22,
+                                              height: 22,
+                                              decoration: const BoxDecoration(
+                                                color: AppColors.surfaceElevated,
+                                                shape: BoxShape.circle,
+                                              ),
+                                              child: Center(
+                                                child: Text(
+                                                  '$rank',
+                                                  style: GoogleFonts.rubik(
+                                                    color: Colors.white70,
+                                                    fontSize: 10,
+                                                    fontWeight: FontWeight.w800,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            PlayerAvatar(
+                                              nickname: player.nickname,
+                                              avatar: player.avatar,
+                                              size: 26,
+                                              score: null,
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Expanded(
+                                              child: Row(
+                                                children: [
+                                                  Flexible(
+                                                    child: Text(
+                                                      player.nickname,
+                                                      overflow: TextOverflow.ellipsis,
+                                                      style: GoogleFonts.nunitoSans(
+                                                        color: Colors.white,
+                                                        fontWeight: isMe ? FontWeight.w800 : FontWeight.w700,
+                                                        fontSize: 12,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  if (isMe) ...[
+                                                    const SizedBox(width: 6),
+                                                    Container(
+                                                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                                      decoration: BoxDecoration(
+                                                        color: AppColors.accent,
+                                                        borderRadius: BorderRadius.circular(5),
+                                                      ),
+                                                      child: Text(
+                                                        'TÚ',
+                                                        style: GoogleFonts.rubik(
+                                                          color: const Color(0xFF0B1124),
+                                                          fontSize: 8,
+                                                          fontWeight: FontWeight.w900,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ],
+                                              ),
+                                            ),
+                                            if (pointsGained > 0)
+                                              Container(
+                                                margin: const EdgeInsets.only(right: 6),
+                                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                decoration: BoxDecoration(
+                                                  color: AppColors.correct.withOpacity(0.2),
+                                                  borderRadius: BorderRadius.circular(999),
+                                                  border: Border.all(color: AppColors.correct, width: 1),
+                                                ),
+                                                child: Text(
+                                                  '+$pointsGained',
+                                                  style: GoogleFonts.rubik(
+                                                    color: AppColors.correct,
+                                                    fontWeight: FontWeight.w800,
+                                                    fontSize: 10,
+                                                  ),
+                                                ),
+                                              ),
+                                            Text(
+                                              '${player.score} pts',
+                                              style: GoogleFonts.rubik(
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.w800,
+                                                fontSize: 12,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                  const SizedBox(height: 10),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ),
+
+                        // Fixed Bottom Countdown & Progress Bar
+                        const SizedBox(height: 12),
+                        AnimatedBuilder(
+                          animation: _timerCtrl,
+                          builder: (context, _) {
+                            final progress = (1.0 - _timerCtrl.value).clamp(0.0, 1.0);
+                            final secondsLeft = (5 * progress).ceil().clamp(1, 5);
+
+                            return Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        const Text('⏳ ', style: TextStyle(fontSize: 12)),
+                                        Text(
+                                          'Siguiente turno en ${secondsLeft}s...',
+                                          style: GoogleFonts.rubik(
+                                            color: AppColors.textMuted,
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    Text(
+                                      '¡Alístate!',
+                                      style: GoogleFonts.rubik(
+                                        color: AppColors.accent,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 6),
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(999),
+                                  child: LinearProgressIndicator(
+                                    value: progress,
+                                    minHeight: 6,
+                                    backgroundColor: Colors.white10,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      hasSpecialMode ? specialMode.badgeColor : AppColors.primary,
+                                    ),
                                   ),
                                 ),
                               ],
-                            ),
-                          );
-                        },
-                      ),
-                      const SizedBox(height: 16),
-
-                      // 5. Footer waiting for next turn
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const SizedBox(
-                            width: 14,
-                            height: 14,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: AppColors.primary,
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Text(
-                            'Siguiente turno en breve...',
-                            style: GoogleFonts.nunitoSans(
-                              color: AppColors.textMuted,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              fontStyle: FontStyle.italic,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
+                            );
+                          },
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -2081,7 +2395,7 @@ class _TurnEndScoreboardOverlay extends StatelessWidget {
     final pointsGained = player.pointsGained as int? ?? 0;
 
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 8, vertical: isCenter ? 12 : 8),
+      padding: EdgeInsets.symmetric(horizontal: 6, vertical: isCenter ? 10 : 8),
       decoration: BoxDecoration(
         color: AppColors.cardColor,
         borderRadius: BorderRadius.circular(18),

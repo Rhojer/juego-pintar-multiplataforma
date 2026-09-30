@@ -711,19 +711,25 @@ class GameRoom {
 
     console.log(`[Room ${this.code}] Turn ended. Word was "${this.currentWord}". Guessed: ${this.correctGuessers.size}`);
 
+    const currentDrawer = this.players.get(this.currentDrawerId);
     this._io.to(this.code).emit('turn-ended', {
-      word:         this.currentWord,
-      originalWord: this.currentOriginalWord,
-      players:      [...this.players.values()].map((p) => ({
+      word:           this.currentWord,
+      originalWord:   this.currentOriginalWord,
+      drawerNickname: currentDrawer?.nickname || 'Dibujante',
+      drawerAvatar:   currentDrawer?.avatar || 'arepa',
+      drawerId:       this.currentDrawerId,
+      correctCount:   this.correctGuessers.size,
+      players:        [...this.players.values()].map((p) => ({
         id:           p.id,
         nickname:     p.nickname,
+        avatar:       p.avatar || 'arepa',
         score:        p.score,
         pointsGained: this.turnPointsGained.get(p.id) || 0,
       })),
       allGuessed,
-      currentRound: this.currentRound,
-      totalRounds:  this.totalRounds,
-      specialMode:  this.currentSpecialMode,
+      currentRound:   this.currentRound,
+      totalRounds:    this.totalRounds,
+      specialMode:    this.currentSpecialMode,
     });
 
     // Reset special mode and words at the conclusion of the turn
