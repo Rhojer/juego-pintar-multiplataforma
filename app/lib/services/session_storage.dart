@@ -17,6 +17,24 @@ class SessionStorage {
     } catch (_) {}
   }
 
+  /// Saves the chosen nickname.
+  static Future<void> saveNickname(String nickname) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_keyNickname, nickname);
+    } catch (_) {}
+  }
+
+  /// Retrieves the saved nickname preference.
+  static Future<String> getNickname() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final nick = prefs.getString(_keyNickname);
+      if (nick != null && nick.isNotEmpty) return nick;
+    } catch (_) {}
+    return '';
+  }
+
   /// Retrieves the saved avatar preference, defaulting to 'arepa'.
   static Future<String> getAvatar() async {
     try {

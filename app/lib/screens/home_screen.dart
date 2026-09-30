@@ -110,8 +110,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
   void _checkSavedSession() async {
     final savedAvatar = await SessionStorage.getAvatar();
+    final savedNickname = await SessionStorage.getNickname();
     if (mounted) {
-      setState(() => _selectedAvatar = savedAvatar);
+      setState(() {
+        _selectedAvatar = savedAvatar;
+        if (_nicknameCtrl.text.isEmpty) {
+          _nicknameCtrl.text = savedNickname.isNotEmpty ? savedNickname : 'CheoElMecánico';
+        }
+      });
     }
 
     final session = await SessionStorage.getSession();
@@ -180,16 +186,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
   void _joinPublic() {
     if (!(_formKey.currentState?.validate() ?? false)) return;
+    final nick = _nicknameCtrl.text.trim();
+    SessionStorage.saveNickname(nick);
+    SessionStorage.saveAvatar(_selectedAvatar);
     setState(() => _isConnecting = true);
     _startConnectingTimeout();
     ref.read(gameProvider.notifier).joinPublic(
-      _nicknameCtrl.text.trim(),
+      nick,
       avatar: _selectedAvatar,
     );
   }
 
   void _showPrivateSheet() {
     if (!(_formKey.currentState?.validate() ?? false)) return;
+    final nick = _nicknameCtrl.text.trim();
+    SessionStorage.saveNickname(nick);
+    SessionStorage.saveAvatar(_selectedAvatar);
     showModalBottomSheet(
       context: context,
       backgroundColor: AppColors.surface,
@@ -197,7 +209,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (ctx) => _PrivateRoomSheet(
-        nickname: _nicknameCtrl.text.trim(),
+        nickname: nick,
         avatar: _selectedAvatar,
         onConnecting: () {
           setState(() => _isConnecting = true);
