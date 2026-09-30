@@ -9,6 +9,7 @@ import '../models/vzla_avatar.dart';
 import '../providers/game_provider.dart';
 import '../services/socket_service.dart';
 import '../services/session_storage.dart';
+import '../widgets/avatar_album_dialog.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -415,58 +416,70 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
     return Column(
       children: [
-        // Avatar grande destacado con halo 2.5D
-        Container(
-          width: 110,
-          height: 110,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: AppColors.cardColor,
-            border: Border.all(color: AppColors.primary, width: 3.5),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.primary.withOpacity(0.35),
-                blurRadius: 20,
-                spreadRadius: 2,
-              ),
-              const BoxShadow(
-                color: Color(0xFF090D1C),
-                offset: Offset(0, 5),
-                blurRadius: 0,
-              ),
-            ],
-          ),
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              ClipOval(
-                child: Image.asset(
-                  currentAvatar.assetPath,
-                  width: 98,
-                  height: 98,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Text(
-                    currentAvatar.emoji,
-                    style: const TextStyle(fontSize: 48),
+        // Avatar grande destacado con halo 2.5D (interactivo)
+        GestureDetector(
+          onTap: () {
+            AvatarAlbumDialog.show(
+              context,
+              currentAvatarId: _selectedAvatar,
+              onAvatarSelected: (newId) {
+                setState(() => _selectedAvatar = newId);
+                SessionStorage.saveAvatar(newId);
+              },
+            );
+          },
+          child: Container(
+            width: 110,
+            height: 110,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: AppColors.cardColor,
+              border: Border.all(color: AppColors.primary, width: 3.5),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primary.withOpacity(0.35),
+                  blurRadius: 20,
+                  spreadRadius: 2,
+                ),
+                const BoxShadow(
+                  color: Color(0xFF090D1C),
+                  offset: Offset(0, 5),
+                  blurRadius: 0,
+                ),
+              ],
+            ),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                ClipOval(
+                  child: Image.asset(
+                    currentAvatar.assetPath,
+                    width: 98,
+                    height: 98,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Text(
+                      currentAvatar.emoji,
+                      style: const TextStyle(fontSize: 48),
+                    ),
                   ),
                 ),
-              ),
-              Positioned(
-                bottom: 2,
-                right: 2,
-                child: Container(
-                  padding: const EdgeInsets.all(5),
-                  decoration: const BoxDecoration(
-                    color: AppColors.accent,
-                    shape: BoxShape.circle,
+                Positioned(
+                  bottom: 2,
+                  right: 2,
+                  child: Container(
+                    padding: const EdgeInsets.all(5),
+                    decoration: const BoxDecoration(
+                      color: AppColors.accent,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.brush_rounded, size: 13, color: Color(0xFF0A112C)),
                   ),
-                  child: const Icon(Icons.brush_rounded, size: 13, color: Color(0xFF0A112C)),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 10),
         Text(
           currentAvatar.name,
           style: GoogleFonts.rubik(
@@ -483,7 +496,45 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             fontWeight: FontWeight.w600,
           ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 8),
+        // Botón para abrir el álbum completo Stitch
+        InkWell(
+          onTap: () {
+            AvatarAlbumDialog.show(
+              context,
+              currentAvatarId: _selectedAvatar,
+              onAvatarSelected: (newId) {
+                setState(() => _selectedAvatar = newId);
+                SessionStorage.saveAvatar(newId);
+              },
+            );
+          },
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            decoration: BoxDecoration(
+              color: AppColors.cardColor,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.borderSubtle),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.grid_view_rounded, size: 13, color: AppColors.primary),
+                const SizedBox(width: 5),
+                Text(
+                  'Ver Álbum de Avatares (12/12) 🎨',
+                  style: GoogleFonts.rubik(
+                    color: AppColors.primary,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 14),
         // Carrusel selector de miniaturas
         SizedBox(
           height: 58,
