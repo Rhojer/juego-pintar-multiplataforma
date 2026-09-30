@@ -163,6 +163,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
             if (showWordChoices)
               _WordSelectionOverlay(
                 words: gameState.offeredWords!,
+                wordDetails: gameState.offeredWordDetails,
                 specialMode: gameState.specialMode,
                 onWordChosen: (chosenWord) {
                   ref.read(gameProvider.notifier).chooseWord(chosenWord);
@@ -499,6 +500,10 @@ class _WordDisplay extends StatelessWidget {
 
     // 2. Normal drawing phase: drawer sees full word
     if (gameState.amIDrawing && gameState.currentWord != null) {
+      final showOriginal = mode != null &&
+          gameState.originalWord != null &&
+          gameState.originalWord!.toLowerCase() != gameState.currentWord!.toLowerCase();
+
       return Column(
         children: [
           Text(
@@ -522,6 +527,17 @@ class _WordDisplay extends StatelessWidget {
             textAlign: TextAlign.center,
             overflow: TextOverflow.ellipsis,
           ),
+          if (showOriginal)
+            Text(
+              '(Dibujas: ${gameState.originalWord!.toUpperCase()})',
+              style: GoogleFonts.nunito(
+                color: Colors.white70,
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+              ),
+              textAlign: TextAlign.center,
+              overflow: TextOverflow.ellipsis,
+            ),
         ],
       );
     }
@@ -1423,10 +1439,12 @@ class _WordSelectionOverlay extends ConsumerWidget {
   const _WordSelectionOverlay({
     required this.words,
     required this.onWordChosen,
+    this.wordDetails,
     this.specialMode,
   });
 
   final List<String> words;
+  final List<Map<String, String>>? wordDetails;
   final ValueChanged<String> onWordChosen;
   final SpecialModeData? specialMode;
 
@@ -1541,6 +1559,10 @@ class _WordSelectionOverlay extends ConsumerWidget {
                     ...words.asMap().entries.map((entry) {
                       final idx = entry.key;
                       final word = entry.value;
+                      final original = wordDetails?.firstWhere(
+                        (d) => d['word']?.toLowerCase() == word.toLowerCase(),
+                        orElse: () => <String, String>{},
+                      )['original'];
                       final difficulty = idx == 0 ? 'Fácil' : idx == 1 ? 'Media' : 'Candela 🔥';
                       final pts = idx == 0 ? '+100 pts' : idx == 1 ? '+150 pts' : '+250 pts';
                       final isRecommended = idx == 1;
@@ -1599,6 +1621,20 @@ class _WordSelectionOverlay extends ConsumerWidget {
                                           letterSpacing: 0.5,
                                         ),
                                       ),
+                                      if (original != null && original.toLowerCase() != word.toLowerCase())
+                                        Padding(
+                                          padding: const EdgeInsets.only(top: 2, bottom: 2),
+                                          child: Text(
+                                            '(Dibujas: ${original.toUpperCase()})',
+                                            style: GoogleFonts.nunitoSans(
+                                              color: isRecommended
+                                                  ? const Color(0xFF0B1124).withOpacity(0.85)
+                                                  : AppColors.secondary,
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w800,
+                                            ),
+                                          ),
+                                        ),
                                       Row(
                                         children: [
                                           Text(

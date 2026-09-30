@@ -65,9 +65,11 @@ class GameState {
     required this.myNickname,
     this.wordHint,
     this.currentWord,       // Only populated for the drawer
+    this.originalWord,      // Untransformed word (e.g. 'playa' for 'plasha')
     this.lastWord,          // Set at end of turn so guessers can see it
     this.isChoosingWord = false,
     this.offeredWords,
+    this.offeredWordDetails,
     this.showTurnEndOverlay = false,
     this.specialMode,
   });
@@ -85,6 +87,7 @@ class GameState {
   final String myNickname;
   final bool isChoosingWord;
   final List<String>? offeredWords;
+  final List<Map<String, String>>? offeredWordDetails;
   final bool showTurnEndOverlay;
   final SpecialModeData? specialMode;
 
@@ -93,6 +96,9 @@ class GameState {
 
   /// Full word — only given to the drawer by the server
   final String? currentWord;
+
+  /// Untransformed original word for special modes (e.g. 'playa' when word is 'plasha')
+  final String? originalWord;
 
   /// The word revealed after the turn ends
   final String? lastWord;
@@ -130,8 +136,10 @@ class GameState {
       myNickname: myNickname,
       isChoosingWord: false,
       offeredWords: null,
+      offeredWordDetails: null,
       showTurnEndOverlay: false,
       specialMode: null,
+      originalWord: null,
     );
   }
 
@@ -151,14 +159,18 @@ class GameState {
     String? myNickname,
     String? wordHint,
     String? currentWord,
+    String? originalWord,
     String? lastWord,
     bool? isChoosingWord,
     List<String>? offeredWords,
+    List<Map<String, String>>? offeredWordDetails,
     bool? showTurnEndOverlay,
     SpecialModeData? specialMode,
     bool clearCurrentWord = false,
+    bool clearOriginalWord = false,
     bool clearLastWord = false,
     bool clearOfferedWords = false,
+    bool clearOfferedWordDetails = false,
     bool clearSpecialMode = false,
   }) {
     return GameState(
@@ -175,9 +187,11 @@ class GameState {
       myNickname: myNickname ?? this.myNickname,
       wordHint: wordHint ?? this.wordHint,
       currentWord: clearCurrentWord ? null : (currentWord ?? this.currentWord),
+      originalWord: clearOriginalWord ? null : (originalWord ?? this.originalWord),
       lastWord: clearLastWord ? null : (lastWord ?? this.lastWord),
       isChoosingWord: isChoosingWord ?? this.isChoosingWord,
       offeredWords: clearOfferedWords ? null : (offeredWords ?? this.offeredWords),
+      offeredWordDetails: clearOfferedWordDetails ? null : (offeredWordDetails ?? this.offeredWordDetails),
       showTurnEndOverlay: showTurnEndOverlay ?? this.showTurnEndOverlay,
       specialMode: clearSpecialMode ? null : (specialMode ?? this.specialMode),
     );

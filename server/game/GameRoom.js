@@ -141,6 +141,9 @@ class GameRoom {
 
     /** @type {Object|null} currently active special mode for this turn */
     this.currentSpecialMode       = null;
+    this.currentOriginalWord      = null;   // original untransformed word (e.g. 'playa' for 'plasha')
+    this.offeredWordDetails       = [];     // [{ word: 'plasha', original: 'playa' }]
+    this.offeredWordMap           = new Map(); // word -> original
     this.totalTurnsPlayed         = 0;
     this.lastSpecialModeTurn      = -99;
     this.specialModesTriggeredCount = 0;
@@ -529,6 +532,7 @@ class GameRoom {
         bannerText: modeData.bannerText,
         badgeColor: modeData.badgeColor,
         textColor: modeData.textColor,
+        hintReminder: modeData.hintReminder,
         celebrationText: modeData.celebrationText,
       };
       this.lastSpecialModeTurn = this.totalTurnsPlayed;
@@ -536,15 +540,30 @@ class GameRoom {
       console.log(`[Room ${this.code}] 💥 SPECIAL MODE TRIGGERED: ${modeData.name} (${modeData.emoji}) for ${drawerNickname}`);
     }
 
-    this.offeredWords = this.currentSpecialMode
-      ? pickThreeWordsForMode(this.currentSpecialMode.id)
-      : pickThreeWords();
+    if (this.currentSpecialMode) {
+      const modeChoices = pickThreeWordsForMode(this.currentSpecialMode.id);
+      this.offeredWords = modeChoices.map(c => c.word);
+      this.offeredWordDetails = modeChoices;
+      this.offeredWordMap = new Map();
+      for (const c of modeChoices) {
+        this.offeredWordMap.set(c.word.toLowerCase(), c.original.toLowerCase());
+        this.offeredWordMap.set(c.original.toLowerCase(), c.original.toLowerCase());
+      }
+    } else {
+      this.offeredWords = pickThreeWords();
+      this.offeredWordDetails = this.offeredWords.map(w => ({ word: w, original: w }));
+      this.offeredWordMap = new Map();
+      for (const w of this.offeredWords) {
+        this.offeredWordMap.set(w.toLowerCase(), w.toLowerCase());
+      }
+    }
 
     console.log(`[Room ${this.code}] Round ${this.currentRound}/${this.totalRounds} — ${drawerNickname} is choosing between: ${this.offeredWords.join(', ')}`);
 
     // Emit 'choose-word' to the drawer with the 3 choices
     this._io.to(drawerId).emit('choose-word', {
       words:          this.offeredWords,
+      wordDetails:    this.offeredWordDetails,
       timeLimit:      10,
       drawerNickname,
       specialMode:    this.currentSpecialMode,
@@ -607,12 +626,13 @@ class GameRoom {
       : (this.offeredWords && this.offeredWords[0]) || pickRandomWord();
 
     this.currentWord     = validWord;
+    this.currentOriginalWord = (this.offeredWordMap && this.offeredWordMap.get(validWord.toLowerCase())) || validWord;
     this.currentWordHint = buildHint(this.currentWord);
     this.turnStartTime   = Date.now();
     this.currentStrokes  = [];
 
     const drawerNickname = this.players.get(this.currentDrawerId)?.nickname || 'Dibujante';
-    console.log(`[Room ${this.code}] Round ${this.currentRound}/${this.totalRounds} — ${drawerNickname} draws "${this.currentWord}"`);
+    console.log(`[Room ${this.code}] Round ${this.currentRound}/${this.totalRounds} — ${drawerNickname} draws "${this.currentWord}" (original: "${this.currentOriginalWord}")`);
 
     // Emit 'turn-started' to each socket: drawer gets secret word, guessers get hint
     const publicPlayers = this.getPublicState().players;
@@ -627,6 +647,7 @@ class GameRoom {
         currentRound:          this.currentRound,
         totalRounds:           this.totalRounds,
         word:                  isDrawer ? this.currentWord : null,
+        originalWord:          isDrawer ? this.currentOriginalWord : null,
         players:               publicPlayers,
         specialMode:           this.currentSpecialMode,
       });
@@ -634,9 +655,10 @@ class GameRoom {
 
     // Also send 'your-word' directly to drawer for full compatibility
     this._io.to(this.currentDrawerId).emit('your-word', {
-      word:        this.currentWord,
-      wordHint:    this.currentWordHint,
-      specialMode: this.currentSpecialMode,
+      word:         this.currentWord,
+      originalWord: this.currentOriginalWord,
+      wordHint:     this.currentWordHint,
+      specialMode:  this.currentSpecialMode,
     });
 
     // Second-by-second countdown for client timer
@@ -691,6 +713,7 @@ class GameRoom {
 
     this._io.to(this.code).emit('turn-ended', {
       word:         this.currentWord,
+      originalWord: this.currentOriginalWord,
       players:      [...this.players.values()].map((p) => ({
         id:           p.id,
         nickname:     p.nickname,
@@ -703,8 +726,9 @@ class GameRoom {
       specialMode:  this.currentSpecialMode,
     });
 
-    // Reset special mode at the conclusion of the turn
+    // Reset special mode and words at the conclusion of the turn
     this.currentSpecialMode = null;
+    this.currentOriginalWord = null;
 
     // Pause 5 seconds before starting the next turn so clients can show minimal results overlay
     setTimeout(() => {
@@ -764,6 +788,9 @@ class GameRoom {
     this.correctGuessers.clear();
     this.turnPointsGained.clear();
     this.currentSpecialMode       = null;
+    this.currentOriginalWord      = null;
+    this.offeredWordDetails       = [];
+    this.offeredWordMap           = new Map();
     this.totalTurnsPlayed         = 0;
     this.lastSpecialModeTurn      = -99;
     this.specialModesTriggeredCount = 0;
@@ -787,7 +814,7 @@ class GameRoom {
    * Processes a guess from a player.
    * @param {string} socketId
    * @param {string} guess
-   * @returns {{ correct: boolean, alreadyGuessed: boolean }}
+   * @returns {{ correct: boolean, alreadyGuessed: boolean, almostOriginal?: boolean, originalWord?: string, points?: number, allGuessed?: boolean, specialMode?: Object }}
    */
   handleGuess(socketId, guess) {
     // Drawers can't guess their own word
@@ -801,7 +828,8 @@ class GameRoom {
     }
 
     // Accent-insensitive and case-insensitive check
-    const isCorrect = normalizeForComparison(guess) === normalizeForComparison(this.currentWord);
+    const normalizedGuess = normalizeForComparison(guess);
+    const isCorrect = normalizedGuess === normalizeForComparison(this.currentWord);
 
     if (isCorrect) {
       const timeLeft = this._getTimeLeft();
@@ -837,6 +865,23 @@ class GameRoom {
       }
 
       return { correct: true, alreadyGuessed: false, points, allGuessed, specialMode: this.currentSpecialMode };
+    }
+
+    // Check if player typed the original untransformed word (e.g. 'playa' instead of 'plasha')
+    const isOriginalWord = !isCorrect &&
+      this.currentSpecialMode &&
+      this.currentOriginalWord &&
+      this.currentOriginalWord.toLowerCase() !== (this.currentWord || '').toLowerCase() &&
+      normalizedGuess === normalizeForComparison(this.currentOriginalWord);
+
+    if (isOriginalWord) {
+      return {
+        correct: false,
+        alreadyGuessed: false,
+        almostOriginal: true,
+        specialMode: this.currentSpecialMode,
+        originalWord: this.currentOriginalWord,
+      };
     }
 
     return { correct: false, alreadyGuessed: false, specialMode: this.currentSpecialMode };
