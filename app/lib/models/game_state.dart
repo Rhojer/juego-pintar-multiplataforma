@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'player.dart';
+import 'special_mode.dart';
 
 /// The overall status of the game session
 enum GameStatus {
@@ -68,6 +69,7 @@ class GameState {
     this.isChoosingWord = false,
     this.offeredWords,
     this.showTurnEndOverlay = false,
+    this.specialMode,
   });
 
   final String roomCode;
@@ -84,6 +86,7 @@ class GameState {
   final bool isChoosingWord;
   final List<String>? offeredWords;
   final bool showTurnEndOverlay;
+  final SpecialModeData? specialMode;
 
   /// Underscores and revealed letters shown to guessers: e.g. "_ _ v _ l _"
   final String? wordHint;
@@ -128,6 +131,7 @@ class GameState {
       isChoosingWord: false,
       offeredWords: null,
       showTurnEndOverlay: false,
+      specialMode: null,
     );
   }
 
@@ -151,9 +155,11 @@ class GameState {
     bool? isChoosingWord,
     List<String>? offeredWords,
     bool? showTurnEndOverlay,
+    SpecialModeData? specialMode,
     bool clearCurrentWord = false,
     bool clearLastWord = false,
     bool clearOfferedWords = false,
+    bool clearSpecialMode = false,
   }) {
     return GameState(
       roomCode: roomCode ?? this.roomCode,
@@ -173,6 +179,7 @@ class GameState {
       isChoosingWord: isChoosingWord ?? this.isChoosingWord,
       offeredWords: clearOfferedWords ? null : (offeredWords ?? this.offeredWords),
       showTurnEndOverlay: showTurnEndOverlay ?? this.showTurnEndOverlay,
+      specialMode: clearSpecialMode ? null : (specialMode ?? this.specialMode),
     );
   }
 

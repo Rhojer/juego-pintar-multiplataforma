@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/chat_message.dart';
 import '../models/game_state.dart';
 import '../models/player.dart';
+import '../models/special_mode.dart';
 import '../services/socket_service.dart';
 import '../core/constants.dart';
 
@@ -78,6 +79,13 @@ class GameNotifier extends Notifier<GameState?> {
       offeredWords = (data['offeredWords'] as List).map((e) => e.toString()).toList();
     }
 
+    final specialModeRaw = data['specialMode'];
+    final specialMode = specialModeRaw is Map<String, dynamic>
+        ? SpecialModeData.fromJson(specialModeRaw)
+        : (specialModeRaw is Map
+            ? SpecialModeData.fromJson(Map<String, dynamic>.from(specialModeRaw))
+            : null);
+
     state = GameState(
       roomCode: roomCode,
       isPrivate: isPrivate,
@@ -95,6 +103,7 @@ class GameNotifier extends Notifier<GameState?> {
       isChoosingWord: isSelectingWord,
       offeredWords: offeredWords,
       showTurnEndOverlay: false,
+      specialMode: specialMode,
     );
 
     // Restore timer
@@ -206,6 +215,13 @@ class GameNotifier extends Notifier<GameState?> {
     final rawPlayers = data['players'];
     final players = rawPlayers != null ? _parsePlayers(rawPlayers) : current.players;
 
+    final specialModeRaw = data['specialMode'];
+    final specialMode = specialModeRaw is Map<String, dynamic>
+        ? SpecialModeData.fromJson(specialModeRaw)
+        : (specialModeRaw is Map
+            ? SpecialModeData.fromJson(Map<String, dynamic>.from(specialModeRaw))
+            : null);
+
     final markedPlayers = players.map((p) {
       return p.copyWith(isDrawing: p.nickname == drawerNickname, hasGuessed: false);
     }).toList();
@@ -218,12 +234,24 @@ class GameNotifier extends Notifier<GameState?> {
       currentDrawerNickname: drawerNickname,
       players: markedPlayers,
       clearCurrentWord: true,
+      specialMode: specialMode,
+      clearSpecialMode: specialMode == null,
     );
+
+    if (specialMode != null) {
+      ref.read(chatProvider.notifier).addSystem(
+            '${specialMode.emoji} ${specialMode.bannerText}',
+          );
+    }
 
     ref.read(chatProvider.notifier).addSystem(
           drawerNickname == current.myNickname
-              ? '¡Te toca dibujar! Elige una palabra.'
-              : '¡$drawerNickname está eligiendo palabra!',
+              ? (specialMode != null
+                  ? '${specialMode.emoji} ¡Te toca dibujar en ${specialMode.name}! Elige una palabra.'
+                  : '¡Te toca dibujar! Elige una palabra.')
+              : (specialMode != null
+                  ? '${specialMode.emoji} ¡$drawerNickname elige palabra en ${specialMode.name}!'
+                  : '¡$drawerNickname está eligiendo palabra!'),
         );
   }
 
@@ -237,6 +265,13 @@ class GameNotifier extends Notifier<GameState?> {
     final wordLen = (data['wordLength'] as num?)?.toInt() ?? 0;
     final round = (data['round'] as num?)?.toInt() ?? current.currentRound;
     final timeLeft = (data['timeLeft'] as num?)?.toInt() ?? AppConstants.roundTime;
+
+    final specialModeRaw = data['specialMode'];
+    final specialMode = specialModeRaw is Map<String, dynamic>
+        ? SpecialModeData.fromJson(specialModeRaw)
+        : (specialModeRaw is Map
+            ? SpecialModeData.fromJson(Map<String, dynamic>.from(specialModeRaw))
+            : current.specialMode);
 
     // Parse updated player list (scores might have been reset/updated)
     final rawPlayers = data['players'];
@@ -259,15 +294,26 @@ class GameNotifier extends Notifier<GameState?> {
       timeLeft: timeLeft,
       players: markedPlayers,
       clearLastWord: true,
+      specialMode: specialMode,
+      clearSpecialMode: specialMode == null,
     );
 
     ref.read(timerProvider.notifier).state = timeLeft;
     ref.read(drawingProvider.notifier).clear();
-    ref.read(chatProvider.notifier).addSystem(
-          word != null
-              ? '${VzlaMessages.turnStartDrawing} La palabra: "$word"'
-              : '¡$drawerNickname está dibujando! Adivina la palabra.',
-        );
+
+    if (specialMode != null) {
+      ref.read(chatProvider.notifier).addSystem(
+            word != null
+                ? '${specialMode.emoji} [${specialMode.name}] Tu palabra: "$word" — ${specialMode.subtitle}'
+                : '${specialMode.emoji} [${specialMode.name}] ¡$drawerNickname está dibujando! Adivina la palabra.',
+          );
+    } else {
+      ref.read(chatProvider.notifier).addSystem(
+            word != null
+                ? '${VzlaMessages.turnStartDrawing} La palabra: "$word"'
+                : '¡$drawerNickname está dibujando! Adivina la palabra.',
+          );
+    }
   }
 
   void _onWordChoices(Map<String, dynamic> data) {
@@ -276,10 +322,19 @@ class GameNotifier extends Notifier<GameState?> {
     final rawWords = data['words'] as List<dynamic>?;
     if (rawWords == null) return;
     final words = rawWords.map((w) => w.toString()).toList();
+
+    final specialModeRaw = data['specialMode'];
+    final specialMode = specialModeRaw is Map<String, dynamic>
+        ? SpecialModeData.fromJson(specialModeRaw)
+        : (specialModeRaw is Map
+            ? SpecialModeData.fromJson(Map<String, dynamic>.from(specialModeRaw))
+            : current.specialMode);
+
     state = current.copyWith(
       isChoosingWord: true,
       offeredWords: words,
       showTurnEndOverlay: false,
+      specialMode: specialMode,
     );
   }
 
@@ -291,6 +346,13 @@ class GameNotifier extends Notifier<GameState?> {
     final rawPlayers = data['players'];
     final players = rawPlayers != null ? _parsePlayers(rawPlayers) : current.players;
 
+    final specialModeRaw = data['specialMode'];
+    final specialMode = specialModeRaw is Map<String, dynamic>
+        ? SpecialModeData.fromJson(specialModeRaw)
+        : (specialModeRaw is Map
+            ? SpecialModeData.fromJson(Map<String, dynamic>.from(specialModeRaw))
+            : current.specialMode);
+
     state = current.copyWith(
       status: GameStatus.playing,
       showTurnEndOverlay: true,
@@ -298,11 +360,18 @@ class GameNotifier extends Notifier<GameState?> {
       players: players,
       clearCurrentWord: true,
       clearOfferedWords: true,
+      specialMode: specialMode,
     );
 
-    ref.read(chatProvider.notifier).addSystem(
-          '${VzlaMessages.turnEndWord}"$word". ¡Qué vaina!',
-        );
+    if (specialMode != null) {
+      ref.read(chatProvider.notifier).addSystem(
+            '${specialMode.emoji} Fin del ${specialMode.name}. La palabra era: "$word".',
+          );
+    } else {
+      ref.read(chatProvider.notifier).addSystem(
+            '${VzlaMessages.turnEndWord}"$word". ¡Qué vaina!',
+          );
+    }
   }
 
   void _onGameEnded(Map<String, dynamic> data) {
