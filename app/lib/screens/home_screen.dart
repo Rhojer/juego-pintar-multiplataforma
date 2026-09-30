@@ -535,7 +535,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 const Icon(Icons.grid_view_rounded, size: 13, color: AppColors.primary),
                 const SizedBox(width: 5),
                 Text(
-                  'Ver Álbum de Avatares (12/12) 🎨',
+                  'Ver Álbum de Avatares (${VzlaAvatars.all.length}/${VzlaAvatars.all.length}) 🎨',
                   style: GoogleFonts.rubik(
                     color: AppColors.primary,
                     fontSize: 11,
