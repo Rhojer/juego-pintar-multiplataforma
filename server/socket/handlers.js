@@ -420,6 +420,18 @@ function registerHandlers(io) {
             isCorrect:   false,
             specialMode: result.specialMode,
           });
+
+          // If guesser typed the original word without mode pronunciation, send them a direct hint
+          if (result.almostOriginal && result.specialMode) {
+            const reminder = result.specialMode.hintReminder || '¡Escríbela con la pronunciación del modo!';
+            socket.emit('chat-message', {
+              type:        'system',
+              nickname:    result.specialMode.name,
+              text:        `⚠️ ¡Casi! Recuerda la regla del ${result.specialMode.name}: ${reminder}`,
+              isWarning:   true,
+              specialMode: result.specialMode,
+            });
+          }
         }
       } catch (err) {
         console.error('[guess] Error:', err);

@@ -261,6 +261,7 @@ class GameNotifier extends Notifier<GameState?> {
 
     final drawerNickname = data['drawerNickname'] as String? ?? '';
     final word = data['word'] as String?;           // Only for the drawer
+    final originalWord = data['originalWord'] as String? ?? word;
     final wordHint = data['wordHint'] as String?;   // Dashes for guessers
     final wordLen = (data['wordLength'] as num?)?.toInt() ?? 0;
     final round = (data['round'] as num?)?.toInt() ?? current.currentRound;
@@ -286,11 +287,14 @@ class GameNotifier extends Notifier<GameState?> {
       isChoosingWord: false,
       showTurnEndOverlay: false,
       clearOfferedWords: true,
+      clearOfferedWordDetails: true,
       currentRound: round,
       currentDrawerNickname: drawerNickname,
       wordLength: wordLen,
       wordHint: word != null ? null : wordHint, // drawer sees full word
       currentWord: word,
+      originalWord: originalWord,
+      clearOriginalWord: originalWord == null,
       timeLeft: timeLeft,
       players: markedPlayers,
       clearLastWord: true,
@@ -302,9 +306,12 @@ class GameNotifier extends Notifier<GameState?> {
     ref.read(drawingProvider.notifier).clear();
 
     if (specialMode != null) {
+      final clue = (originalWord != null && originalWord != word)
+          ? '$word (dibujas: $originalWord)'
+          : (word ?? '');
       ref.read(chatProvider.notifier).addSystem(
             word != null
-                ? '${specialMode.emoji} [${specialMode.name}] Tu palabra: "$word" — ${specialMode.subtitle}'
+                ? '${specialMode.emoji} [${specialMode.name}] Tu palabra: "$clue" — ${specialMode.subtitle}'
                 : '${specialMode.emoji} [${specialMode.name}] ¡$drawerNickname está dibujando! Adivina la palabra.',
           );
     } else {
@@ -323,6 +330,20 @@ class GameNotifier extends Notifier<GameState?> {
     if (rawWords == null) return;
     final words = rawWords.map((w) => w.toString()).toList();
 
+    final rawWordDetails = data['wordDetails'] as List<dynamic>?;
+    List<Map<String, String>>? offeredWordDetails;
+    if (rawWordDetails != null) {
+      offeredWordDetails = rawWordDetails.map((e) {
+        if (e is Map) {
+          return {
+            'word': e['word']?.toString() ?? '',
+            'original': e['original']?.toString() ?? '',
+          };
+        }
+        return {'word': e.toString(), 'original': e.toString()};
+      }).toList();
+    }
+
     final specialModeRaw = data['specialMode'];
     final specialMode = specialModeRaw is Map<String, dynamic>
         ? SpecialModeData.fromJson(specialModeRaw)
@@ -333,6 +354,7 @@ class GameNotifier extends Notifier<GameState?> {
     state = current.copyWith(
       isChoosingWord: true,
       offeredWords: words,
+      offeredWordDetails: offeredWordDetails,
       showTurnEndOverlay: false,
       specialMode: specialMode,
     );
@@ -343,6 +365,7 @@ class GameNotifier extends Notifier<GameState?> {
     if (current == null) return;
 
     final word = data['word'] as String? ?? '';
+    final originalWord = data['originalWord'] as String?;
     final rawPlayers = data['players'];
     final players = rawPlayers != null ? _parsePlayers(rawPlayers) : current.players;
 
@@ -359,13 +382,18 @@ class GameNotifier extends Notifier<GameState?> {
       lastWord: word,
       players: players,
       clearCurrentWord: true,
+      clearOriginalWord: true,
       clearOfferedWords: true,
+      clearOfferedWordDetails: true,
       specialMode: specialMode,
     );
 
     if (specialMode != null) {
+      final reveal = (originalWord != null && originalWord != word)
+          ? '"$word" ($originalWord)'
+          : '"$word"';
       ref.read(chatProvider.notifier).addSystem(
-            '${specialMode.emoji} Fin del ${specialMode.name}. La palabra era: "$word".',
+            '${specialMode.emoji} Fin del ${specialMode.name}. La palabra era: $reveal.',
           );
     } else {
       ref.read(chatProvider.notifier).addSystem(

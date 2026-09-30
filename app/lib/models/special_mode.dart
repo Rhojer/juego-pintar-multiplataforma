@@ -11,6 +11,8 @@ class SpecialModeData {
     required this.badgeColor,
     required this.textColor,
     required this.celebrationText,
+    this.hintReminder,
+    this.ruleHint,
   });
 
   final String id;
@@ -21,6 +23,8 @@ class SpecialModeData {
   final Color badgeColor;
   final Color textColor;
   final String celebrationText;
+  final String? hintReminder;
+  final String? ruleHint;
 
   static Color _parseColor(dynamic val, Color fallback) {
     if (val == null) return fallback;
@@ -48,6 +52,8 @@ class SpecialModeData {
       badgeColor: _parseColor(json['badgeColor'], const Color(0xFF29B6F6)),
       textColor: _parseColor(json['textColor'], Colors.white),
       celebrationText: json['celebrationText'] as String? ?? '',
+      hintReminder: json['hintReminder'] as String?,
+      ruleHint: json['ruleHint'] as String?,
     );
   }
 
@@ -60,5 +66,7 @@ class SpecialModeData {
     'badgeColor': '#${badgeColor.value.toRadixString(16).padLeft(8, '0').substring(2)}',
     'textColor': '#${textColor.value.toRadixString(16).padLeft(8, '0').substring(2)}',
     'celebrationText': celebrationText,
+    'hintReminder': hintReminder,
+    'ruleHint': ruleHint,
   };
 }

@@ -9,15 +9,17 @@
 
 const wordBank = {
   // Verbos y acciones fáciles de representar con dibujos
+  // Acciones y verbos
   acciones: [
     'bailar', 'correr', 'dormir', 'llorar', 'cantar',
     'nadar', 'cocinar', 'saltar', 'comer', 'pintar',
     'reir', 'barrer', 'peinar', 'manejar', 'escribir',
     'volar', 'pescar', 'boxear', 'limpiar', 'patinar',
     'gritar', 'besar', 'abrazar', 'cortar', 'lavar',
+    'rayar', 'apoyar',
   ],
 
-  // Comida, frutas y platos venezolanos/latinos
+  // Comida, frutas y platos
   comida: [
     'arepa', 'empanada', 'cachapa', 'tequeño', 'hallaca',
     'mango', 'cambur', 'piña', 'manzana', 'fresa',
@@ -25,6 +27,7 @@ const wordBank = {
     'pizza', 'hamburguesa', 'huevo', 'queso', 'pan',
     'torta', 'helado', 'galleta', 'sopa', 'tajadas',
     'chocolate', 'chicha', 'papelon', 'guarapo', 'mandoca',
+    'pollo', 'cebolla', 'mayonesa', 'yogur',
   ],
 
   // Animales comunes y autóctonos
@@ -36,6 +39,7 @@ const wordBank = {
     'mariposa', 'abeja', 'rana', 'pinguino', 'cangrejo',
     'jirafa', 'pulpo', 'buho', 'aguila', 'turpial',
     'chigüire', 'morrocoy', 'cunaguaro', 'tonina', 'caiman',
+    'ardilla', 'camello', 'papagayo',
   ],
 
   // Objetos y herramientas cotidianas
@@ -48,6 +52,7 @@ const wordBank = {
     'vela', 'candado', 'maleta', 'pelota', 'bicicleta',
     'cohete', 'puente', 'bombillo', 'budare', 'cuatro',
     'maracas', 'tambor', 'hamaca', 'alpargata', 'gandola',
+    'botella', 'toalla', 'anillo', 'yate', 'yoyo',
   ],
 
   // Naturaleza, clima y lugares
@@ -57,60 +62,100 @@ const wordBank = {
     'arbol', 'flor', 'isla', 'desierto', 'cueva',
     'arcoiris', 'casa', 'castillo', 'hospital', 'iglesia',
     'cerro', 'selva', 'laguna', 'viento', 'rayo',
+    'valle', 'arroyo',
   ],
 };
 
 // ---------------------------------------------------------------------------
-// Bancos Temáticos para Modos Especiales
+// Reglas Fonéticas para Modos Especiales
 // ---------------------------------------------------------------------------
+
+/**
+ * Fonética Modo Che Boludo (Argentino):
+ * Las palabras con 'll' o 'y' se reemplazan por 'sh'.
+ * e.g. 'playa' -> 'plasha', 'caballo' -> 'cabasho', 'lluvia' -> 'shuvia', 'llave' -> 'shave'
+ */
+function transformCheBoludo(word) {
+  return word.toLowerCase().replace(/ll/g, 'sh').replace(/y/g, 'sh');
+}
+
+/**
+ * Fonética Modo Españolete:
+ * Las 'c' que suenan como 's' (antes de 'e' o 'i') y las 's' se reemplazan por 'z'.
+ * e.g. 'casa' -> 'caza', 'sol' -> 'zol', 'queso' -> 'quezo', 'cocinar' -> 'cozinar'
+ */
+function transformEspanolete(word) {
+  return word.toLowerCase().replace(/c(?=[ei])/g, 'z').replace(/s/g, 'z');
+}
+
+/**
+ * Fonética Modo Chinense:
+ * Las 'r' (y 'rr') se reemplazan por 'l'.
+ * e.g. 'perro' -> 'pelo', 'carro' -> 'calo', 'arroz' -> 'aloz', 'guitarra' -> 'guitala', 'flor' -> 'flol'
+ */
+function transformChinense(word) {
+  return word.toLowerCase().replace(/rr/g, 'l').replace(/r/g, 'l');
+}
+
+/**
+ * Transforma una palabra según el modo especial activo.
+ * @param {string} word
+ * @param {string} modeId
+ * @returns {string}
+ */
+function transformWordForMode(word, modeId) {
+  if (modeId === 'che_boludo') return transformCheBoludo(word);
+  if (modeId === 'espanolete') return transformEspanolete(word);
+  if (modeId === 'chinense') return transformChinense(word);
+  return word;
+}
+
+/**
+ * Verifica si una palabra es candidata para el modo (contiene las letras a transformar).
+ * @param {string} word
+ * @param {string} modeId
+ * @returns {boolean}
+ */
+function isWordEligibleForMode(word, modeId) {
+  return transformWordForMode(word, modeId).toLowerCase() !== word.toLowerCase();
+}
+
 const SPECIAL_MODES = {
   che_boludo: {
     id: 'che_boludo',
     name: 'Modo Che Boludo',
     emoji: '🇦🇷',
-    subtitle: '¡Pará la mano che, a dibujar con garra!',
-    bannerText: '¡MODO CHE BOLUDO ACTIVADO, PIBE!',
+    subtitle: '¡Pará la mano che! En este turno la LL y la Y se escriben como SH 🧉',
+    bannerText: '¡MODO CHE BOLUDO! ¡ESCRIBÍ CON SH, PIBE!',
     badgeColor: '#29B6F6',
     textColor: '#0D47A1',
-    celebrationText: '¡la clavó al ángulo che boludo!',
-    words: [
-      'mate', 'asado', 'fernet', 'pibe', 'colectivo',
-      'tango', 'obelisco', 'alfajor', 'milanesa', 'facturas',
-      'quilombo', 'remera', 'bombilla', 'choripan', 'campeon',
-      'termo', 'parrilla', 'gaucho', 'dulcedeleche', 'medialuna',
-    ],
+    ruleHint: 'En este modo la LL y la Y se escriben con SH (Ej: Plasha, Cabasho)',
+    hintReminder: '¡Casi che! ¡Acuérdate que acá se escribe con SH!',
+    celebrationText: '¡la clavó al ángulo con acento che boludo! 🇦🇷🎉',
   },
   espanolete: {
     id: 'espanolete',
     name: 'Modo Españolete',
     emoji: '🇪🇸',
-    subtitle: '¡Hostia chaval, a dibujar a todo gas!',
-    bannerText: '¡MODO ESPAÑOLETE ACTIVADO, TÍO!',
+    subtitle: '¡Hostia chaval! En este turno las S y C suaves se escriben como Z 🥘',
+    bannerText: '¡MODO ESPAÑOLETE! ¡A TODO GAS CON LA Z, TÍO!',
     badgeColor: '#E53935',
     textColor: '#FFD54F',
-    celebrationText: '¡ha flipado en colores y acertó, tío!',
-    words: [
-      'paella', 'jamon', 'tortilla', 'furgoneta', 'ordenador',
-      'tapas', 'flamenco', 'churros', 'chaval', 'castillo',
-      'aceituna', 'gazpacho', 'botijo', 'siesta', 'torero',
-      'croquetas', 'sangria', 'guitarra', 'molino', 'olivo',
-    ],
+    ruleHint: 'En este modo las S y C suaves se escriben con Z (Ej: Caza, Zepillo)',
+    hintReminder: '¡Hostia tío! ¡Que en este modo las S y C se escriben con Z!',
+    celebrationText: '¡ha flipado en colores con la Z y acertó! 🇪🇸🎉',
   },
   chinense: {
     id: 'chinense',
     name: 'Modo Chinense',
     emoji: '🥢',
-    subtitle: '¡Hola amio! ¡Dibuja clalo que hoy no fío!',
-    bannerText: '¡MODO CHINENSE! ¡NO FÍO HOY, MAÑANA SÍ!',
+    subtitle: '¡Hola amio! En este tulno todas las R se cambian pol L 🥢',
+    bannerText: '¡MODO CHINENSE! ¡CAMBIA LA R POL LA L, AMIO!',
     badgeColor: '#D32F2F',
     textColor: '#FFD700',
-    celebrationText: '¡adivinó clalo amio! ¡Toma caramelo de vuelto! 🍬',
-    words: [
-      'arroz', 'dragon', 'palillos', 'wantan', 'lumpia',
-      'kungfu', 'soya', 'bambu', 'caramelo', 'fideo',
-      'panda', 'te', 'farol', 'wok', 'pescado',
-      'bonsai', 'moneda', 'sombrero', 'tigre', 'tienda',
-    ],
+    ruleHint: 'En este modo las R se cambian por L (Ej: Pelo, Calo, Flol)',
+    hintReminder: '¡Casi amio! ¡Recuelda que la R se cambia pol L!',
+    celebrationText: '¡adivinó clalo amio con la L! ¡Toma calamelo de vuelto! 🍬',
   },
 };
 
@@ -120,7 +165,6 @@ const SPECIAL_MODES = {
  */
 function getAllWords() {
   const allWords = Object.values(wordBank).flat();
-  // Filtro estricto: sin espacios y en minúsculas
   return [...new Set(allWords)].map(w => w.trim().toLowerCase()).filter(w => !w.includes(' '));
 }
 
@@ -150,7 +194,6 @@ function pickThreeWords() {
     selected.add(w);
   }
 
-  // Si por alguna razón no llena 3, rellenar con palabras seguras
   const fallbackList = ['arepa', 'perro', 'casa', 'bailar', 'sol'];
   for (const fb of fallbackList) {
     if (selected.size >= 3) break;
@@ -161,26 +204,39 @@ function pickThreeWords() {
 }
 
 /**
- * Selecciona 3 palabras para un modo especial específico.
+ * Selecciona 3 palabras transformadas fonéticamente para un modo especial específico.
+ * Filtra las palabras que contengan las letras correspondientes del banco general y las transforma.
  * @param {string} modeId
- * @returns {string[]}
+ * @returns {Array<{ word: string, original: string }>}
  */
 function pickThreeWordsForMode(modeId) {
-  const mode = SPECIAL_MODES[modeId];
-  if (!mode || !mode.words || mode.words.length === 0) {
-    return pickThreeWords();
-  }
+  const eligible = ALL_WORDS.filter(w => isWordEligibleForMode(w, modeId));
+  const pool = eligible.length >= 3 ? eligible : ALL_WORDS;
 
-  const words = [...mode.words];
-  const selected = new Set();
+  const chosenOriginals = new Set();
   let attempts = 0;
-  while (selected.size < 3 && attempts < 30) {
+  while (chosenOriginals.size < 3 && attempts < 40) {
     attempts++;
-    const w = words[Math.floor(Math.random() * words.length)];
-    selected.add(w);
+    const w = pool[Math.floor(Math.random() * pool.length)];
+    chosenOriginals.add(w);
   }
 
-  return [...selected].slice(0, 3);
+  // Fallbacks si hicieran falta
+  const fallbacks = modeId === 'che_boludo'
+    ? ['playa', 'caballo', 'lluvia']
+    : modeId === 'espanolete'
+      ? ['casa', 'queso', 'cocinar']
+      : ['perro', 'carro', 'arroz'];
+
+  for (const fb of fallbacks) {
+    if (chosenOriginals.size >= 3) break;
+    chosenOriginals.add(fb);
+  }
+
+  return [...chosenOriginals].slice(0, 3).map(original => ({
+    original,
+    word: transformWordForMode(original, modeId),
+  }));
 }
 
 module.exports = {
@@ -190,4 +246,6 @@ module.exports = {
   pickRandomWord,
   pickThreeWords,
   pickThreeWordsForMode,
+  transformWordForMode,
+  isWordEligibleForMode,
 };
