@@ -635,134 +635,149 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
 
   // ────────────────────────── 3. Invitation Card ──────────────────────────────
   Widget _buildInvitationCard(String code) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.borderSubtle, width: 2),
-        boxShadow: const [
-          BoxShadow(color: Color(0xFF050C27), offset: Offset(0, 4)),
-        ],
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isNarrow = constraints.maxWidth < 460;
+
+        final codeSection = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'CÓDIGO DE ENTRADA',
+              style: GoogleFonts.rubik(
+                color: AppColors.textMuted,
+                fontSize: 9,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 0.8,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  'CÓDIGO DE ENTRADA',
-                  style: GoogleFonts.rubik(
-                    color: AppColors.textMuted,
-                    fontSize: 9,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 0.8,
+                InkWell(
+                  onTap: () => _copyRoomCode(code),
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: AppColors.background,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.accent.withOpacity(0.5)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          code,
+                          style: GoogleFonts.rubik(
+                            color: AppColors.accent,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 2,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        const Icon(Icons.copy_rounded, color: Colors.white70, size: 14),
+                      ],
+                    ),
                   ),
                 ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    InkWell(
-                      onTap: () => _copyRoomCode(code),
+                const SizedBox(width: 8),
+                // QR Modal Trigger
+                InkWell(
+                  onTap: () => _showQRModal(code),
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: AppColors.cardColor,
                       borderRadius: BorderRadius.circular(12),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: AppColors.background,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: AppColors.accent.withOpacity(0.5)),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              code,
-                              style: GoogleFonts.rubik(
-                                color: AppColors.accent,
-                                fontSize: 18,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: 2,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            const Icon(Icons.copy_rounded, color: Colors.white70, size: 14),
-                          ],
-                        ),
-                      ),
+                      border: Border.all(color: AppColors.borderSubtle),
+                      boxShadow: const [
+                        BoxShadow(color: Color(0xFF050C27), offset: Offset(0, 2)),
+                      ],
                     ),
-                    const SizedBox(width: 8),
-                    // QR Modal Trigger
-                    InkWell(
-                      onTap: () => _showQRModal(code),
-                      borderRadius: BorderRadius.circular(12),
-                      child: Container(
-                        width: 38,
-                        height: 38,
-                        decoration: BoxDecoration(
-                          color: AppColors.cardColor,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: AppColors.borderSubtle),
-                          boxShadow: const [
-                            BoxShadow(color: Color(0xFF050C27), offset: Offset(0, 2)),
-                          ],
-                        ),
-                        child: const Icon(Icons.qr_code_2_rounded, color: Colors.white, size: 20),
-                      ),
-                    ),
-                  ],
+                    child: const Icon(Icons.qr_code_2_rounded, color: Colors.white, size: 20),
+                  ),
                 ),
               ],
             ),
-          ),
-          const SizedBox(width: 10),
+          ],
+        );
 
-          // WhatsApp Share Button (Tactile Yellow)
-          Expanded(
-            child: Container(
-              height: 48,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(14),
-                boxShadow: const [
-                  BoxShadow(color: Color(0xFFC79100), offset: Offset(0, 4)),
-                ],
-              ),
-              child: ElevatedButton.icon(
-                onPressed: () => _shareWhatsApp(code),
-                icon: const Icon(Icons.share_rounded, color: Color(0xFF050C27), size: 18),
-                label: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'COMPARTIR',
-                      style: GoogleFonts.rubik(
-                        color: const Color(0xFF050C27),
-                        fontSize: 8,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    Text(
-                      'WhatsApp 📲',
-                      style: GoogleFonts.rubik(
-                        color: const Color(0xFF050C27),
-                        fontSize: 12,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                  ],
+        final shareButton = Container(
+          height: 48,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            boxShadow: const [
+              BoxShadow(color: Color(0xFFC79100), offset: Offset(0, 4)),
+            ],
+          ),
+          child: ElevatedButton.icon(
+            onPressed: () => _shareWhatsApp(code),
+            icon: const Icon(Icons.share_rounded, color: Color(0xFF050C27), size: 18),
+            label: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'COMPARTIR',
+                  style: GoogleFonts.rubik(
+                    color: const Color(0xFF050C27),
+                    fontSize: 8,
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  elevation: 0,
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                Text(
+                  'WhatsApp 📲',
+                  style: GoogleFonts.rubik(
+                    color: const Color(0xFF050C27),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
-              ),
+              ],
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              elevation: 0,
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
             ),
           ),
-        ],
-      ),
+        );
+
+        return Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: AppColors.borderSubtle, width: 2),
+            boxShadow: const [
+              BoxShadow(color: Color(0xFF050C27), offset: Offset(0, 4)),
+            ],
+          ),
+          child: isNarrow
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    codeSection,
+                    const SizedBox(height: 12),
+                    shareButton,
+                  ],
+                )
+              : Row(
+                  children: [
+                    Expanded(child: codeSection),
+                    const SizedBox(width: 10),
+                    Expanded(child: shareButton),
+                  ],
+                ),
+        );
+      },
     );
   }
 
@@ -772,6 +787,8 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
     required String myId,
     required String roomCode,
   }) {
+    final isNarrow = MediaQuery.of(context).size.width < 500;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -803,9 +820,9 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
         GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 2,
-            childAspectRatio: 1.85,
+            childAspectRatio: isNarrow ? 1.48 : 1.85,
             mainAxisSpacing: 10,
             crossAxisSpacing: 10,
           ),
@@ -1192,14 +1209,17 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
         children: [
           Icon(icon, color: iconColor, size: 16),
           const SizedBox(height: 4),
-          Text(
-            title,
-            style: GoogleFonts.rubik(
-              color: Colors.white,
-              fontWeight: FontWeight.w800,
-              fontSize: 11,
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              title,
+              style: GoogleFonts.rubik(
+                color: Colors.white,
+                fontWeight: FontWeight.w800,
+                fontSize: 11,
+              ),
+              textAlign: TextAlign.center,
             ),
-            textAlign: TextAlign.center,
           ),
           Text(
             subtitle,
