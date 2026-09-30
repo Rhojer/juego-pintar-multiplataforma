@@ -5,7 +5,7 @@
  */
 
 const crypto = require('crypto');
-const { getAllWords, pickRandomWord, pickThreeWords, pickThreeWordsForMode, SPECIAL_MODES } = require('./words');
+const { getAllWords, pickRandomWord, pickThreeWords, pickThreeWordsForMode, isCloseGuess, SPECIAL_MODES } = require('./words');
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -874,17 +874,24 @@ class GameRoom {
       this.currentOriginalWord.toLowerCase() !== (this.currentWord || '').toLowerCase() &&
       normalizedGuess === normalizeForComparison(this.currentOriginalWord);
 
-    if (isOriginalWord) {
+    // Check if guess is close to target word or original word (Pinturillo close guess rule)
+    const isClose = !isCorrect && (
+      isOriginalWord ||
+      isCloseGuess(normalizedGuess, this.currentWord, this.currentOriginalWord)
+    );
+
+    if (isClose) {
       return {
         correct: false,
         alreadyGuessed: false,
-        almostOriginal: true,
+        isClose: true,
+        almostOriginal: isOriginalWord,
         specialMode: this.currentSpecialMode,
         originalWord: this.currentOriginalWord,
       };
     }
 
-    return { correct: false, alreadyGuessed: false, specialMode: this.currentSpecialMode };
+    return { correct: false, alreadyGuessed: false, isClose: false, specialMode: this.currentSpecialMode };
   }
 
   // -------------------------------------------------------------------------

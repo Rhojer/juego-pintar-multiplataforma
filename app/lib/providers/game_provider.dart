@@ -525,7 +525,19 @@ class ChatNotifier extends StateNotifier<List<ChatMessage>> {
     _chatSub = _socket.onChatMessage.listen((data) {
       final nickname = data['nickname'] as String? ?? '';
       final text = data['text'] as String? ?? '';
-      addMessage(ChatMessage.guess(nickname: nickname, text: text));
+      final isCorrect = data['isCorrect'] == true;
+      final isClose = data['isClose'] == true;
+      final isSystem = data['type'] == 'system';
+
+      if (isCorrect) {
+        addCorrect(nickname: nickname, text: text);
+      } else if (isClose) {
+        addClose(nickname: nickname, text: text);
+      } else if (isSystem) {
+        addSystem(text);
+      } else {
+        addMessage(ChatMessage.guess(nickname: nickname, text: text));
+      }
     });
 
     _joinErrSub = _socket.onJoinError.listen((msg) {
@@ -546,6 +558,10 @@ class ChatNotifier extends StateNotifier<List<ChatMessage>> {
 
   void addSystem(String text) {
     state = [...state, ChatMessage.system(text)];
+  }
+
+  void addClose({String nickname = '', required String text}) {
+    state = [...state, ChatMessage.close(nickname: nickname, text: text)];
   }
 
   void addCorrect({required String nickname, required String text}) {

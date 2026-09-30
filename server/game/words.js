@@ -239,6 +239,70 @@ function pickThreeWordsForMode(modeId) {
   }));
 }
 
+/**
+ * Calculates Levenshtein edit distance between two strings.
+ * @param {string} a
+ * @param {string} b
+ * @returns {number}
+ */
+function levenshteinDistance(a, b) {
+  const an = a ? a.length : 0;
+  const bn = b ? b.length : 0;
+  if (an === 0) return bn;
+  if (bn === 0) return an;
+  const matrix = Array.from({ length: bn + 1 }, () => new Array(an + 1));
+  for (let i = 0; i <= an; i++) matrix[0][i] = i;
+  for (let j = 0; j <= bn; j++) matrix[j][0] = j;
+  for (let j = 1; j <= bn; j++) {
+    for (let i = 1; i <= an; i++) {
+      matrix[j][i] = b[j - 1] === a[i - 1]
+        ? matrix[j - 1][i - 1]
+        : Math.min(matrix[j - 1][i - 1] + 1, matrix[j][i - 1] + 1, matrix[j - 1][i] + 1);
+    }
+  }
+  return matrix[bn][an];
+}
+
+/**
+ * Checks if a normalized guess is close to the secret target word (or untransformed original).
+ * @param {string} guess - normalized
+ * @param {string} targetWord - normalized
+ * @param {string} [originalWord] - optional normalized original word in special mode
+ * @returns {boolean}
+ */
+function isCloseGuess(guess, targetWord, originalWord) {
+  if (!guess || !targetWord) return false;
+  const g = guess.toLowerCase().trim();
+  const t = targetWord.toLowerCase().trim();
+  if (!g || !t || g === t) return false;
+
+  // If in special mode and typed original word exactly
+  if (originalWord) {
+    const orig = originalWord.toLowerCase().trim();
+    if (g === orig) return true;
+  }
+
+  // Short words (<= 3 chars): only if one contains the other with length diff of 1
+  if (t.length <= 3) {
+    return Math.abs(g.length - t.length) === 1 && (g.startsWith(t) || t.startsWith(g));
+  }
+
+  const dist = levenshteinDistance(g, t);
+  const maxAllowed = t.length <= 7 ? 1 : 2;
+  if (dist > 0 && dist <= maxAllowed) return true;
+
+  if (originalWord) {
+    const orig = originalWord.toLowerCase().trim();
+    if (orig.length > 3) {
+      const origDist = levenshteinDistance(g, orig);
+      const origMax = orig.length <= 7 ? 1 : 2;
+      if (origDist <= origMax) return true;
+    }
+  }
+
+  return false;
+}
+
 module.exports = {
   wordBank,
   SPECIAL_MODES,
@@ -248,4 +312,6 @@ module.exports = {
   pickThreeWordsForMode,
   transformWordForMode,
   isWordEligibleForMode,
+  levenshteinDistance,
+  isCloseGuess,
 };

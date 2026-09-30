@@ -409,8 +409,35 @@ function registerHandlers(io) {
             isCorrect:   true,
             specialMode: result.specialMode,
           });
+        } else if (result.isClose) {
+          // REGLA PINTURILLO:
+          // Los demás jugadores NO PUEDEN VER la palabra cuando está cerca de la palabra a adivinar.
+          // 1. Notificación privada al que adivinó (con su palabra y recordatorio/alerta)
+          let whisperText = `🔥 ¡"${guessText}" está muy cerca de la palabra!`;
+          if (result.almostOriginal && result.specialMode) {
+            const reminder = result.specialMode.hintReminder || '¡Escríbela con la pronunciación del modo!';
+            whisperText = `⚠️ ¡"${guessText}" casi! Recuerda la regla del ${result.specialMode.name}: ${reminder}`;
+          }
+
+          socket.emit('chat-message', {
+            type:        'system',
+            nickname:    result.specialMode ? result.specialMode.name : 'Pista',
+            text:        whisperText,
+            isClose:     true,
+            isWarning:   true,
+            specialMode: result.specialMode,
+          });
+
+          // 2. A todos los demás en la sala: se avisa que el jugador está cerca SIN revelar la palabra
+          socket.to(room.code).emit('chat-message', {
+            type:        'system',
+            nickname:    'Juego',
+            text:        `🔥 ¡${player.nickname} está muy cerca de la palabra!`,
+            isClose:     true,
+            specialMode: result.specialMode,
+          });
         } else {
-          // Broadcast the guess as a chat message (visible to all — including drawer)
+          // Intento normal no cercano: visible para todos en el chat
           io.to(room.code).emit('chat-message', {
             type:        'guess',
             socketId:    socket.id,
@@ -420,18 +447,6 @@ function registerHandlers(io) {
             isCorrect:   false,
             specialMode: result.specialMode,
           });
-
-          // If guesser typed the original word without mode pronunciation, send them a direct hint
-          if (result.almostOriginal && result.specialMode) {
-            const reminder = result.specialMode.hintReminder || '¡Escríbela con la pronunciación del modo!';
-            socket.emit('chat-message', {
-              type:        'system',
-              nickname:    result.specialMode.name,
-              text:        `⚠️ ¡Casi! Recuerda la regla del ${result.specialMode.name}: ${reminder}`,
-              isWarning:   true,
-              specialMode: result.specialMode,
-            });
-          }
         }
       } catch (err) {
         console.error('[guess] Error:', err);

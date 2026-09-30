@@ -10,11 +10,11 @@ class ChatMessageWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (message.isSystem) return _SystemMessage(text: message.text);
     if (message.isCorrect) return _CorrectMessage(message: message);
-    if (message.text.toLowerCase().contains('cerca')) {
+    if (message.isClose || message.text.toLowerCase().contains('cerca')) {
       return _CloseGuessMessage(message: message);
     }
+    if (message.isSystem) return _SystemMessage(text: message.text);
     return _RegularMessage(message: message);
   }
 }
@@ -141,13 +141,14 @@ class _CloseGuessMessage extends StatelessWidget {
               text: TextSpan(
                 style: GoogleFonts.nunitoSans(fontSize: 13, color: Colors.white),
                 children: [
-                  TextSpan(
-                    text: '${message.nickname}: ',
-                    style: GoogleFonts.rubik(
-                      color: AppColors.secondary,
-                      fontWeight: FontWeight.w800,
+                  if (message.nickname.isNotEmpty && message.nickname != 'Juego' && message.nickname != 'Pista')
+                    TextSpan(
+                      text: '${message.nickname}: ',
+                      style: GoogleFonts.rubik(
+                        color: AppColors.secondary,
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
-                  ),
                   TextSpan(
                     text: message.text,
                     style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
