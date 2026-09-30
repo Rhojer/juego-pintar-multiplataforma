@@ -386,24 +386,39 @@ function registerHandlers(io) {
             nickname: player.nickname,
             points:   result.points,
             players:  room.getPublicState().players,
+            specialMode: result.specialMode,
           });
+
+          // Custom celebration text depending on specialMode:
+          let celebration = `¡${player.nickname} adivinó la palabra! 🎉`;
+          if (result.specialMode) {
+            if (result.specialMode.id === 'che_boludo') {
+              celebration = `¡${player.nickname} la clavó al ángulo, che boludo! 🇦🇷🎉`;
+            } else if (result.specialMode.id === 'espanolete') {
+              celebration = `¡Hostia chaval! ¡${player.nickname} lo ha flipado y acertó! 🇪🇸🎉`;
+            } else if (result.specialMode.id === 'chinense') {
+              celebration = `¡${player.nickname} adivinó clalo amio! ¡Toma caramelo de vuelto! 🥢🍬`;
+            }
+          }
 
           // Also send a generic chat message so the guesser sees confirmation
           io.to(room.code).emit('chat-message', {
-            type:      'system',
-            nickname:  player.nickname,
-            text:      `¡${player.nickname} adivinó la palabra! 🎉`,
-            isCorrect: true,
+            type:        'system',
+            nickname:    player.nickname,
+            text:        celebration,
+            isCorrect:   true,
+            specialMode: result.specialMode,
           });
         } else {
           // Broadcast the guess as a chat message (visible to all — including drawer)
           io.to(room.code).emit('chat-message', {
-            type:      'guess',
-            socketId:  socket.id,
-            playerId:  socket.id,
-            nickname:  player.nickname,
-            text:      guessText,
-            isCorrect: false,
+            type:        'guess',
+            socketId:    socket.id,
+            playerId:    socket.id,
+            nickname:    player.nickname,
+            text:        guessText,
+            isCorrect:   false,
+            specialMode: result.specialMode,
           });
         }
       } catch (err) {

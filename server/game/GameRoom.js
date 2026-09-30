@@ -5,7 +5,7 @@
  */
 
 const crypto = require('crypto');
-const { getAllWords, pickRandomWord, pickThreeWords } = require('./words');
+const { getAllWords, pickRandomWord, pickThreeWords, pickThreeWordsForMode, SPECIAL_MODES } = require('./words');
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -138,6 +138,12 @@ class GameRoom {
 
     /** @type {Map<string, NodeJS.Timeout>} sessionToken -> disconnect timeout */
     this.disconnectTimeouts = new Map();
+
+    /** @type {Object|null} currently active special mode for this turn */
+    this.currentSpecialMode       = null;
+    this.totalTurnsPlayed         = 0;
+    this.lastSpecialModeTurn      = -99;
+    this.specialModesTriggeredCount = 0;
 
     /** @type {number} Timestamp of last user activity (for scale/cleanup) */
     this.lastActivity      = Date.now();
@@ -401,6 +407,7 @@ class GameRoom {
       wordHint:               this.currentWordHint,
       wordLength:             this.currentWord ? this.currentWord.length : 0,
       timeLeft,
+      specialMode:          this.currentSpecialMode,
       players: [...this.players.values()].map((p) => ({
         id:           p.id,
         nickname:     p.nickname,
@@ -499,8 +506,39 @@ class GameRoom {
 
     this.currentDrawerId = drawerId;
     this.isSelectingWord = true;
-    this.offeredWords    = pickThreeWords();
+    this.totalTurnsPlayed++;
+    this.currentSpecialMode = null;
+
     const drawerNickname = this.players.get(drawerId)?.nickname || 'Dibujante';
+
+    // Check if this turn activates a Special Mode:
+    // ~35% chance, with >= 2 turns cooldown, or guaranteed once if round >= 2 and none yet
+    const modeKeys = Object.keys(SPECIAL_MODES);
+    const turnsSinceSpecial = this.totalTurnsPlayed - this.lastSpecialModeTurn;
+    const isSpecialTurn = (turnsSinceSpecial >= 2 && Math.random() < 0.35) ||
+      (this.currentRound >= 2 && this.specialModesTriggeredCount === 0 && turnsSinceSpecial >= 1);
+
+    if (isSpecialTurn) {
+      const randomKey = modeKeys[Math.floor(Math.random() * modeKeys.length)];
+      const modeData = SPECIAL_MODES[randomKey];
+      this.currentSpecialMode = {
+        id: modeData.id,
+        name: modeData.name,
+        emoji: modeData.emoji,
+        subtitle: modeData.subtitle,
+        bannerText: modeData.bannerText,
+        badgeColor: modeData.badgeColor,
+        textColor: modeData.textColor,
+        celebrationText: modeData.celebrationText,
+      };
+      this.lastSpecialModeTurn = this.totalTurnsPlayed;
+      this.specialModesTriggeredCount++;
+      console.log(`[Room ${this.code}] 💥 SPECIAL MODE TRIGGERED: ${modeData.name} (${modeData.emoji}) for ${drawerNickname}`);
+    }
+
+    this.offeredWords = this.currentSpecialMode
+      ? pickThreeWordsForMode(this.currentSpecialMode.id)
+      : pickThreeWords();
 
     console.log(`[Room ${this.code}] Round ${this.currentRound}/${this.totalRounds} — ${drawerNickname} is choosing between: ${this.offeredWords.join(', ')}`);
 
@@ -509,6 +547,7 @@ class GameRoom {
       words:          this.offeredWords,
       timeLimit:      10,
       drawerNickname,
+      specialMode:    this.currentSpecialMode,
     });
 
     // Emit 'drawer-choosing' to the entire room
@@ -519,6 +558,7 @@ class GameRoom {
       currentRound:   this.currentRound,
       totalRounds:    this.totalRounds,
       players:        this.getPublicState().players,
+      specialMode:    this.currentSpecialMode,
     });
 
     // 10-second countdown for word selection
@@ -588,13 +628,15 @@ class GameRoom {
         totalRounds:           this.totalRounds,
         word:                  isDrawer ? this.currentWord : null,
         players:               publicPlayers,
+        specialMode:           this.currentSpecialMode,
       });
     }
 
     // Also send 'your-word' directly to drawer for full compatibility
     this._io.to(this.currentDrawerId).emit('your-word', {
-      word:     this.currentWord,
-      wordHint: this.currentWordHint,
+      word:        this.currentWord,
+      wordHint:    this.currentWordHint,
+      specialMode: this.currentSpecialMode,
     });
 
     // Second-by-second countdown for client timer
@@ -658,7 +700,11 @@ class GameRoom {
       allGuessed,
       currentRound: this.currentRound,
       totalRounds:  this.totalRounds,
+      specialMode:  this.currentSpecialMode,
     });
+
+    // Reset special mode at the conclusion of the turn
+    this.currentSpecialMode = null;
 
     // Pause 5 seconds before starting the next turn so clients can show minimal results overlay
     setTimeout(() => {
@@ -717,6 +763,10 @@ class GameRoom {
     this.currentStrokes  = [];
     this.correctGuessers.clear();
     this.turnPointsGained.clear();
+    this.currentSpecialMode       = null;
+    this.totalTurnsPlayed         = 0;
+    this.lastSpecialModeTurn      = -99;
+    this.specialModesTriggeredCount = 0;
 
     for (const player of this.players.values()) {
       player.score     = 0;
@@ -786,10 +836,10 @@ class GameRoom {
         setTimeout(() => this._endTurn(true), 600);
       }
 
-      return { correct: true, alreadyGuessed: false, points, allGuessed };
+      return { correct: true, alreadyGuessed: false, points, allGuessed, specialMode: this.currentSpecialMode };
     }
 
-    return { correct: false, alreadyGuessed: false };
+    return { correct: false, alreadyGuessed: false, specialMode: this.currentSpecialMode };
   }
 
   // -------------------------------------------------------------------------

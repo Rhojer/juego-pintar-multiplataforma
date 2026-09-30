@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../core/constants.dart';
 import '../models/game_state.dart';
+import '../models/special_mode.dart';
 import '../providers/game_provider.dart';
 import '../services/socket_service.dart';
 import '../services/session_storage.dart';
@@ -162,6 +163,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
             if (showWordChoices)
               _WordSelectionOverlay(
                 words: gameState.offeredWords!,
+                specialMode: gameState.specialMode,
                 onWordChosen: (chosenWord) {
                   ref.read(gameProvider.notifier).chooseWord(chosenWord);
                 },
@@ -169,6 +171,13 @@ class _GameScreenState extends ConsumerState<GameScreen> {
             // 2. Minimalist blurred scoreboard overlay at turn end
             if (gameState.showTurnEndOverlay)
               _TurnEndScoreboardOverlay(gameState: gameState),
+            // 3. Special Mode Announcement Banner Overlay
+            if (gameState.specialMode != null && !gameState.showTurnEndOverlay)
+              _SpecialModeBannerOverlay(
+                specialMode: gameState.specialMode!,
+                isDrawer: gameState.amIDrawing,
+                drawerNickname: gameState.currentDrawerNickname,
+              ),
           ],
         ),
       ),
@@ -383,6 +392,39 @@ class _TopBar extends ConsumerWidget {
               ],
             ),
           ),
+          if (gameState.specialMode != null) ...[
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: gameState.specialMode!.badgeColor.withOpacity(0.18),
+                borderRadius: BorderRadius.circular(9999),
+                border: Border.all(color: gameState.specialMode!.badgeColor, width: 1.8),
+                boxShadow: [
+                  BoxShadow(
+                    color: gameState.specialMode!.badgeColor.withOpacity(0.3),
+                    blurRadius: 6,
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(gameState.specialMode!.emoji, style: const TextStyle(fontSize: 13)),
+                  const SizedBox(width: 5),
+                  Text(
+                    gameState.specialMode!.name.toUpperCase(),
+                    style: GoogleFonts.rubik(
+                      color: gameState.specialMode!.badgeColor,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 10,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(width: 12),
           // Word / hint area
           Expanded(child: _WordDisplay(gameState: gameState)),
@@ -401,14 +443,20 @@ class _WordDisplay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final mode = gameState.specialMode;
+
     // 1. Drawer is choosing words
     if (gameState.isChoosingWord) {
       if (gameState.amIDrawing) {
         return Column(
           children: [
             Text(
-              '¡Te toca dibujar!',
-              style: GoogleFonts.nunito(color: AppColors.secondary, fontSize: 11, fontWeight: FontWeight.bold),
+              mode != null ? '${mode.emoji} ¡${mode.name.toUpperCase()}!' : '¡Te toca dibujar!',
+              style: GoogleFonts.nunito(
+                color: mode != null ? mode.badgeColor : AppColors.secondary,
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             Text(
               'ELIGE TU PALABRA',
@@ -427,14 +475,16 @@ class _WordDisplay extends StatelessWidget {
         return Column(
           children: [
             Text(
-              'Turno de ${gameState.currentDrawerNickname}',
+              mode != null
+                  ? '${mode.emoji} Turno de ${gameState.currentDrawerNickname} (${mode.name})'
+                  : 'Turno de ${gameState.currentDrawerNickname}',
               style: GoogleFonts.nunito(color: Colors.white54, fontSize: 11),
               overflow: TextOverflow.ellipsis,
             ),
             Text(
               'Eligiendo palabra...',
               style: GoogleFonts.nunito(
-                color: AppColors.secondary,
+                color: mode != null ? mode.badgeColor : AppColors.secondary,
                 fontSize: 14,
                 fontWeight: FontWeight.w800,
                 fontStyle: FontStyle.italic,
@@ -452,13 +502,19 @@ class _WordDisplay extends StatelessWidget {
       return Column(
         children: [
           Text(
-            '¡Dibuja esto!',
-            style: GoogleFonts.nunito(color: Colors.white54, fontSize: 11),
+            mode != null
+                ? '${mode.emoji} ¡Dibuja en ${mode.name}!'
+                : '¡Dibuja esto!',
+            style: GoogleFonts.nunito(
+              color: mode != null ? mode.badgeColor : Colors.white54,
+              fontSize: 11,
+              fontWeight: mode != null ? FontWeight.w700 : FontWeight.normal,
+            ),
           ),
           Text(
             gameState.currentWord!.toUpperCase(),
             style: GoogleFonts.nunito(
-              color: AppColors.secondary,
+              color: mode != null ? mode.badgeColor : AppColors.secondary,
               fontSize: 18,
               fontWeight: FontWeight.w900,
               letterSpacing: 1,
@@ -477,8 +533,14 @@ class _WordDisplay extends StatelessWidget {
     return Column(
       children: [
         Text(
-          '${gameState.currentDrawerNickname} está dibujando',
-          style: GoogleFonts.nunito(color: Colors.white54, fontSize: 11),
+          mode != null
+              ? '${mode.emoji} ${gameState.currentDrawerNickname} dibuja (${mode.name})'
+              : '${gameState.currentDrawerNickname} está dibujando',
+          style: GoogleFonts.nunito(
+            color: mode != null ? mode.badgeColor : Colors.white54,
+            fontSize: 11,
+            fontWeight: mode != null ? FontWeight.w700 : FontWeight.normal,
+          ),
           overflow: TextOverflow.ellipsis,
         ),
         Text(
@@ -1361,14 +1423,17 @@ class _WordSelectionOverlay extends ConsumerWidget {
   const _WordSelectionOverlay({
     required this.words,
     required this.onWordChosen,
+    this.specialMode,
   });
 
   final List<String> words;
   final ValueChanged<String> onWordChosen;
+  final SpecialModeData? specialMode;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final timer = ref.watch(timerProvider);
+    final borderColor = specialMode?.badgeColor ?? AppColors.primary;
 
     return Positioned.fill(
       child: BackdropFilter(
@@ -1384,9 +1449,15 @@ class _WordSelectionOverlay extends ConsumerWidget {
                 decoration: BoxDecoration(
                   color: AppColors.surface,
                   borderRadius: BorderRadius.circular(28),
-                  border: Border.all(color: AppColors.primary, width: 2.5),
-                  boxShadow: const [
-                    BoxShadow(
+                  border: Border.all(color: borderColor, width: 2.5),
+                  boxShadow: [
+                    if (specialMode != null)
+                      BoxShadow(
+                        color: borderColor.withOpacity(0.3),
+                        blurRadius: 20,
+                        spreadRadius: 2,
+                      ),
+                    const BoxShadow(
                       color: Color(0xFF050C27),
                       offset: Offset(0, 10),
                       blurRadius: 0,
@@ -1400,11 +1471,14 @@ class _WordSelectionOverlay extends ConsumerWidget {
                       children: [
                         Container(
                           padding: const EdgeInsets.all(10),
-                          decoration: const BoxDecoration(
-                            color: AppColors.primary,
+                          decoration: BoxDecoration(
+                            color: specialMode != null ? borderColor.withOpacity(0.2) : AppColors.primary,
                             shape: BoxShape.circle,
+                            border: specialMode != null ? Border.all(color: borderColor, width: 2) : null,
                           ),
-                          child: const Icon(Icons.brush_rounded, color: Color(0xFF0B1124), size: 24),
+                          child: specialMode != null
+                              ? Text(specialMode!.emoji, style: const TextStyle(fontSize: 22))
+                              : const Icon(Icons.brush_rounded, color: Color(0xFF0B1124), size: 24),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
@@ -1412,9 +1486,11 @@ class _WordSelectionOverlay extends ConsumerWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                '¡TU TURNO, PANA!',
+                                specialMode != null
+                                    ? '¡TURNO ${specialMode!.name.toUpperCase()}!'
+                                    : '¡TU TURNO, PANA!',
                                 style: GoogleFonts.rubik(
-                                  color: AppColors.primary,
+                                  color: borderColor,
                                   fontSize: 11,
                                   fontWeight: FontWeight.w900,
                                   letterSpacing: 1,
@@ -1452,7 +1528,9 @@ class _WordSelectionOverlay extends ConsumerWidget {
                     ),
                     const SizedBox(height: 14),
                     Text(
-                      'Los panas en la sala están esperando. ¡Elige una palabra criolla y ponte a rayar!',
+                      specialMode != null
+                          ? specialMode!.subtitle
+                          : 'Los panas en la sala están esperando. ¡Elige una palabra criolla y ponte a rayar!',
                       style: GoogleFonts.nunitoSans(
                         color: AppColors.textMuted,
                         fontSize: 13,
@@ -2063,6 +2141,194 @@ class _TurnEndScoreboardOverlay extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// SPECIAL MODE ANNOUNCEMENT BANNER OVERLAY
+// ═══════════════════════════════════════════════════════════
+
+class _SpecialModeBannerOverlay extends StatefulWidget {
+  const _SpecialModeBannerOverlay({
+    required this.specialMode,
+    required this.isDrawer,
+    required this.drawerNickname,
+  });
+
+  final SpecialModeData specialMode;
+  final bool isDrawer;
+  final String drawerNickname;
+
+  @override
+  State<_SpecialModeBannerOverlay> createState() => _SpecialModeBannerOverlayState();
+}
+
+class _SpecialModeBannerOverlayState extends State<_SpecialModeBannerOverlay>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _animCtrl;
+  late Animation<double> _slideAnim;
+  late Animation<double> _scaleAnim;
+  bool _dismissed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _animCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+    _slideAnim = CurvedAnimation(parent: _animCtrl, curve: Curves.elasticOut);
+    _scaleAnim = CurvedAnimation(parent: _animCtrl, curve: Curves.easeOutBack);
+    _animCtrl.forward();
+
+    // Auto dismiss full banner after 4.5 seconds
+    Future.delayed(const Duration(milliseconds: 4500), () {
+      if (mounted && !_dismissed) {
+        _animCtrl.reverse().then((_) {
+          if (mounted) setState(() => _dismissed = true);
+        });
+      }
+    });
+  }
+
+  @override
+  void didUpdateWidget(_SpecialModeBannerOverlay oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.specialMode.id != widget.specialMode.id) {
+      _dismissed = false;
+      _animCtrl.forward(from: 0.0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _animCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_dismissed) return const SizedBox.shrink();
+
+    return Positioned(
+      top: 16,
+      left: 16,
+      right: 16,
+      child: Center(
+        child: AnimatedBuilder(
+          animation: _animCtrl,
+          builder: (context, child) {
+            return Transform.translate(
+              offset: Offset(0, (1 - _slideAnim.value) * -60),
+              child: Transform.scale(
+                scale: 0.8 + 0.2 * _scaleAnim.value,
+                child: child,
+              ),
+            );
+          },
+          child: GestureDetector(
+            onTap: () {
+              _animCtrl.reverse().then((_) {
+                if (mounted) setState(() => _dismissed = true);
+              });
+            },
+            child: Material(
+              color: Colors.transparent,
+              child: Container(
+                constraints: const BoxConstraints(maxWidth: 520),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0F172A),
+                  borderRadius: BorderRadius.circular(22),
+                  border: Border.all(color: widget.specialMode.badgeColor, width: 3),
+                  boxShadow: [
+                    BoxShadow(
+                      color: widget.specialMode.badgeColor.withOpacity(0.4),
+                      blurRadius: 20,
+                      spreadRadius: 2,
+                    ),
+                    const BoxShadow(
+                      color: Color(0xFF050C27),
+                      offset: Offset(0, 8),
+                      blurRadius: 0,
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 52,
+                      height: 52,
+                      decoration: BoxDecoration(
+                        color: widget.specialMode.badgeColor.withOpacity(0.2),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: widget.specialMode.badgeColor, width: 2),
+                      ),
+                      child: Center(
+                        child: Text(
+                          widget.specialMode.emoji,
+                          style: const TextStyle(fontSize: 28),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: widget.specialMode.badgeColor,
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  '¡TURNO ESPECIAL!',
+                                  style: GoogleFonts.rubik(
+                                    color: Colors.black87,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w900,
+                                    letterSpacing: 0.8,
+                                  ),
+                                ),
+                              ),
+                              const Spacer(),
+                              const Icon(Icons.close_rounded, color: Colors.white54, size: 16),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            widget.specialMode.name.toUpperCase(),
+                            style: GoogleFonts.rubik(
+                              color: Colors.white,
+                              fontSize: 17,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            widget.specialMode.subtitle,
+                            style: GoogleFonts.nunito(
+                              color: AppColors.textMuted,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
