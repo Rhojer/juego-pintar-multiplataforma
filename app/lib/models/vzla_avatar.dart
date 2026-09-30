@@ -27,7 +27,7 @@ class VzlaAvatars {
       emoji: '🫓',
       color: Color(0xFFFFB300),
       subtitle: "Rellena con queso 'e mano",
-      assetPath: 'assets/avatars/arepa.jpg',
+      assetPath: 'assets/avatars/arepa.png',
     ),
     VzlaAvatar(
       id: 'malta',
@@ -35,7 +35,7 @@ class VzlaAvatars {
       emoji: '🥤',
       color: Color(0xFF5D4037),
       subtitle: 'Con espuma burbujeante',
-      assetPath: 'assets/avatars/malta.jpg',
+      assetPath: 'assets/avatars/malta.png',
     ),
     VzlaAvatar(
       id: 'aguacate',
@@ -43,7 +43,7 @@ class VzlaAvatars {
       emoji: '🥑',
       color: Color(0xFF43A047),
       subtitle: 'Con lentes de sol chévere',
-      assetPath: 'assets/avatars/aguacate.jpg',
+      assetPath: 'assets/avatars/aguacate.png',
     ),
     VzlaAvatar(
       id: 'chivo',
@@ -51,7 +51,7 @@ class VzlaAvatars {
       emoji: '🐐',
       color: Color(0xFF8D6E63),
       subtitle: 'Con sombrero de cogollo',
-      assetPath: 'assets/avatars/chivo.jpg',
+      assetPath: 'assets/avatars/chivo.png',
     ),
     VzlaAvatar(
       id: 'baseball',
@@ -59,7 +59,7 @@ class VzlaAvatars {
       emoji: '⚾',
       color: Color(0xFFD32F2F),
       subtitle: 'Costuras rojas y gorrita',
-      assetPath: 'assets/avatars/baseball.jpg',
+      assetPath: 'assets/avatars/baseball.png',
     ),
     VzlaAvatar(
       id: 'mototaxi',
@@ -67,7 +67,7 @@ class VzlaAvatars {
       emoji: '🛵',
       color: Color(0xFF0288D1),
       subtitle: 'Haciendo pirueta caraqueña',
-      assetPath: 'assets/avatars/mototaxi.jpg',
+      assetPath: 'assets/avatars/mototaxi.png',
     ),
     VzlaAvatar(
       id: 'iguana',
@@ -75,7 +75,7 @@ class VzlaAvatars {
       emoji: '🦎',
       color: Color(0xFF2E7D32),
       subtitle: 'Relajada sobre el muro',
-      assetPath: 'assets/avatars/iguana.jpg',
+      assetPath: 'assets/avatars/iguana.png',
     ),
     VzlaAvatar(
       id: 'desierto',
@@ -83,7 +83,7 @@ class VzlaAvatars {
       emoji: '🏜️',
       color: Color(0xFFFB8C00),
       subtitle: 'Duna con cactus y sol',
-      assetPath: 'assets/avatars/desierto.jpg',
+      assetPath: 'assets/avatars/desierto.png',
     ),
     VzlaAvatar(
       id: 'tequeno',
@@ -91,7 +91,7 @@ class VzlaAvatars {
       emoji: '🧀',
       color: Color(0xFFFBC02D),
       subtitle: 'Estirando queso con tártara',
-      assetPath: 'assets/avatars/tequeno.jpg',
+      assetPath: 'assets/avatars/tequeno.png',
     ),
     VzlaAvatar(
       id: 'harina_pan',
@@ -99,7 +99,7 @@ class VzlaAvatars {
       emoji: '🌽',
       color: Color(0xFFFFD600),
       subtitle: 'El corazón de las arepas desde 1960',
-      assetPath: 'assets/avatars/harina_pan.jpg',
+      assetPath: 'assets/avatars/harina_pan.png',
     ),
     VzlaAvatar(
       id: 'guacamaya',
@@ -107,7 +107,7 @@ class VzlaAvatars {
       emoji: '🦜',
       color: Color(0xFFE91E63),
       subtitle: 'Radiante vuelo en Caracas',
-      assetPath: 'assets/avatars/guacamaya.jpg',
+      assetPath: 'assets/avatars/guacamaya.png',
     ),
     VzlaAvatar(
       id: 'caraota',
@@ -115,7 +115,23 @@ class VzlaAvatars {
       emoji: '🍲',
       color: Color(0xFF212121),
       subtitle: 'Grano negro con vaporcito',
-      assetPath: 'assets/avatars/caraota.jpg',
+      assetPath: 'assets/avatars/caraota.png',
+    ),
+    VzlaAvatar(
+      id: 'chicha',
+      name: 'Chicha con Canela',
+      emoji: '🥤',
+      color: Color(0xFFD7CCC8),
+      subtitle: 'Con canela y leche condensada',
+      assetPath: 'assets/avatars/chicha.png',
+    ),
+    VzlaAvatar(
+      id: 'papelon',
+      name: 'Papelón con Limón',
+      emoji: '🍋',
+      color: Color(0xFF795548),
+      subtitle: 'Refrescante bien frío',
+      assetPath: 'assets/avatars/papelon.png',
     ),
   ];
 

@@ -51,6 +51,8 @@ class _AvatarAlbumDialogState extends State<AvatarAlbumDialog> {
     'harina_pan': '¡Pura masa con sabor criollo desde 1960!',
     'guacamaya': '¡Vuelo tricolor en el cielo caraqueño!',
     'caraota': '¡Grano negro criollo con vaporcito!',
+    'chicha': '¡Chicha espesita con canela y leche condensada!',
+    'papelon': '¡Bien frío con limón pa\' matar la sed!',
   };
 
   final Map<String, String> _tags = {
@@ -66,6 +68,8 @@ class _AvatarAlbumDialogState extends State<AvatarAlbumDialog> {
     'harina_pan': 'Épico 🫓',
     'guacamaya': 'El Ávila 🦜',
     'caraota': 'Pabellón 🍲',
+    'chicha': 'Tradicional 🥛',
+    'papelon': 'Refrescante 🍋',
   };
 
   final Map<String, String> _categories = {
@@ -81,6 +85,8 @@ class _AvatarAlbumDialogState extends State<AvatarAlbumDialog> {
     'harina_pan': 'Comida Criolla',
     'guacamaya': 'Criaturas & Personajes',
     'caraota': 'Comida Criolla',
+    'chicha': 'Comida Criolla',
+    'papelon': 'Comida Criolla',
   };
 
   @override
@@ -166,7 +172,7 @@ class _AvatarAlbumDialogState extends State<AvatarAlbumDialog> {
                                 border: Border.all(color: AppColors.primary.withOpacity(0.4)),
                               ),
                               child: Text(
-                                '12/12',
+                                '${VzlaAvatars.all.length}/${VzlaAvatars.all.length}',
                                 style: GoogleFonts.rubik(
                                   color: AppColors.primary,
                                   fontSize: 10,
@@ -317,7 +323,7 @@ class _AvatarAlbumDialogState extends State<AvatarAlbumDialog> {
                       scrollDirection: Axis.horizontal,
                       child: Row(
                         children: [
-                          _buildCategoryChip('Todos', 'Todos (12)'),
+                          _buildCategoryChip('Todos', 'Todos (${VzlaAvatars.all.length})'),
                           const SizedBox(width: 8),
                           _buildCategoryChip('Comida Criolla', '🫓 Comida Criolla'),
                           const SizedBox(width: 8),
