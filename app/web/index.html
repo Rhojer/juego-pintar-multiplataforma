@@ -138,6 +138,20 @@
 
     // 3. Absolute safety timeout
     setTimeout(removeSplash, 15000);
+
+    // 4. Mobile web viewport lock: keep document locked at top so mobile keyboards
+    // don't displace or scroll the page away from the drawing board
+    window.addEventListener('scroll', function () {
+      if (window.scrollY !== 0 || window.scrollX !== 0) {
+        window.scrollTo(0, 0);
+      }
+    });
+    document.addEventListener('focusin', function () {
+      setTimeout(function () {
+        window.scrollTo(0, 0);
+        if (document.body) document.body.scrollTop = 0;
+      }, 50);
+    });
   </script>
 
   <script>

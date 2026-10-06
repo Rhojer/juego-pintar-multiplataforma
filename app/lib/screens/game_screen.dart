@@ -210,24 +210,36 @@ class _PortraitLayout extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isDrawing = gameState.amIDrawing;
+    final isKeyboardOpen = MediaQuery.of(context).viewInsets.bottom > 50;
+
+    // When the keyboard opens on mobile web, give maximum priority to the drawing canvas
+    // so the guesser never loses sight of what is being drawn.
+    final canvasFlex = isDrawing
+        ? 68
+        : isKeyboardOpen
+            ? 76
+            : 52;
+    final chatFlex = isDrawing
+        ? 32
+        : isKeyboardOpen
+            ? 24
+            : 48;
 
     return Column(
       children: [
         // 1. Prominent Word Banner right above the canvas (unmissable on mobile!)
         _GameWordBanner(gameState: gameState),
 
-        // 2. Canvas takes prioritized, stable height
-        // When drawing, drawer gets maximum drawing area (68%)
-        // When guessing, canvas takes 52% and chat 48%
+        // 2. Canvas takes prioritized, stable height so players never lose sight of the drawing
         Expanded(
-          flex: isDrawing ? 68 : 52,
+          flex: canvasFlex,
           child: DrawingCanvas(isDrawing: isDrawing),
         ),
         if (isDrawing) const DrawingToolbar(),
 
         // 3. Chat takes the remaining space
         Expanded(
-          flex: isDrawing ? 32 : 48,
+          flex: chatFlex,
           child: ChatPanel(
             gameState: gameState,
             guessCtrl: guessCtrl,
@@ -1145,6 +1157,8 @@ class ChatPanel extends ConsumerWidget {
       }
     });
 
+    final isKeyboardOpen = MediaQuery.of(context).viewInsets.bottom > 50;
+
     return Container(
       decoration: const BoxDecoration(
         color: AppColors.surface,
@@ -1152,57 +1166,59 @@ class ChatPanel extends ConsumerWidget {
       ),
       child: Column(
         children: [
-          // 1. Live status bar
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-            decoration: const BoxDecoration(
-              color: AppColors.surface,
-              border: Border(bottom: BorderSide(color: AppColors.borderSubtle)),
+          // 1. Live status bar (hidden while keyboard is open to keep canvas 100% visible)
+          if (!isKeyboardOpen)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              decoration: const BoxDecoration(
+                color: AppColors.surface,
+                border: Border(bottom: BorderSide(color: AppColors.borderSubtle)),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.chat_bubble_outline_rounded, size: 14, color: AppColors.textMuted),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Respuestas en Vivo',
+                        style: GoogleFonts.rubik(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.textMuted,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Row(
+                    children: [
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: const BoxDecoration(
+                          color: AppColors.correct,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 5),
+                      Text(
+                        'EN VIVO',
+                        style: GoogleFonts.rubik(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w900,
+                          color: AppColors.correct,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    const Icon(Icons.chat_bubble_outline_rounded, size: 14, color: AppColors.textMuted),
-                    const SizedBox(width: 6),
-                    Text(
-                      'Respuestas en Vivo',
-                      style: GoogleFonts.rubik(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.textMuted,
-                      ),
-                    ),
-                  ],
-                ),
-                Row(
-                  children: [
-                    Container(
-                      width: 8,
-                      height: 8,
-                      decoration: const BoxDecoration(
-                        color: AppColors.correct,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    const SizedBox(width: 5),
-                    Text(
-                      'EN VIVO',
-                      style: GoogleFonts.rubik(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w900,
-                        color: AppColors.correct,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          // 2. Player score strip
-          _PlayerScoreStrip(players: gameState.sortedByScore, myId: gameState.myId),
+          // 2. Player score strip (hidden while typing to keep screen focused on board and input)
+          if (!isKeyboardOpen)
+            _PlayerScoreStrip(players: gameState.sortedByScore, myId: gameState.myId),
           // 3. Chat messages
           Expanded(
             child: messages.isEmpty
@@ -1399,6 +1415,7 @@ class _GuessInput extends StatelessWidget {
                 child: TextField(
                   controller: controller,
                   enabled: !disabled,
+                  scrollPadding: EdgeInsets.zero,
                   onSubmitted: (_) => onSend(),
                   textInputAction: TextInputAction.send,
                   style: GoogleFonts.nunitoSans(
