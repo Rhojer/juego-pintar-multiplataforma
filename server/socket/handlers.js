@@ -416,7 +416,7 @@ function registerHandlers(io) {
           let whisperText = `🔥 ¡"${guessText}" está muy cerca de la palabra!`;
           if (result.almostOriginal && result.specialMode) {
             const reminder = result.specialMode.hintReminder || '¡Escríbela con la pronunciación del modo!';
-            whisperText = `⚠️ ¡"${guessText}" casi! Recuerda la regla del ${result.specialMode.name}: ${reminder}`;
+            whisperText = `⚠️ ¡"${guessText}" casi! Recuerda la tonada del ${result.specialMode.name}: ${reminder}`;
           }
 
           socket.emit('chat-message', {

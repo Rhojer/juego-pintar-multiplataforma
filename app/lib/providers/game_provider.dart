@@ -222,6 +222,8 @@ class GameNotifier extends Notifier<GameState?> {
             ? SpecialModeData.fromJson(Map<String, dynamic>.from(specialModeRaw))
             : null);
 
+    final choosingTime = (data['timeLimit'] as num?)?.toInt() ?? 10;
+
     final markedPlayers = players.map((p) {
       return p.copyWith(isDrawing: p.nickname == drawerNickname, hasGuessed: false);
     }).toList();
@@ -232,11 +234,14 @@ class GameNotifier extends Notifier<GameState?> {
       currentRound: round,
       totalRounds: totalRounds,
       currentDrawerNickname: drawerNickname,
+      timeLeft: choosingTime,
       players: markedPlayers,
       clearCurrentWord: true,
       specialMode: specialMode,
       clearSpecialMode: specialMode == null,
     );
+
+    ref.read(timerProvider.notifier).state = choosingTime;
 
     if (specialMode != null) {
       ref.read(chatProvider.notifier).addSystem(
@@ -265,7 +270,9 @@ class GameNotifier extends Notifier<GameState?> {
     final wordHint = data['wordHint'] as String?;   // Dashes for guessers
     final wordLen = (data['wordLength'] as num?)?.toInt() ?? 0;
     final round = (data['round'] as num?)?.toInt() ?? current.currentRound;
-    final timeLeft = (data['timeLeft'] as num?)?.toInt() ?? AppConstants.roundTime;
+    final timeLeft = (data['timeLeft'] as num?)?.toInt() ??
+        (data['roundTime'] as num?)?.toInt() ??
+        AppConstants.roundTime;
 
     final specialModeRaw = data['specialMode'];
     final specialMode = specialModeRaw is Map<String, dynamic>
@@ -311,7 +318,7 @@ class GameNotifier extends Notifier<GameState?> {
           : (word ?? '');
       ref.read(chatProvider.notifier).addSystem(
             word != null
-                ? '${specialMode.emoji} [${specialMode.name}] Tu palabra: "$clue" — ${specialMode.subtitle}'
+                ? '${specialMode.emoji} [${specialMode.name}] Tu palabra a dibujar: "$clue"'
                 : '${specialMode.emoji} [${specialMode.name}] ¡$drawerNickname está dibujando! Adivina la palabra.',
           );
     } else {

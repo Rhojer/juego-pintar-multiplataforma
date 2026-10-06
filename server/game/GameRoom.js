@@ -644,6 +644,7 @@ class GameRoom {
         wordHint:              this.currentWordHint,
         wordLength:            this.currentWord.length,
         roundTime:             TURN_DURATION,
+        timeLeft:              TURN_DURATION,
         currentRound:          this.currentRound,
         totalRounds:           this.totalRounds,
         word:                  isDrawer ? this.currentWord : null,

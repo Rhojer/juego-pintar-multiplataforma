@@ -407,14 +407,46 @@ class _TopBar extends ConsumerWidget {
   }
 }
 
-class _GameWordBanner extends StatelessWidget {
+class _GameWordBanner extends ConsumerWidget {
   const _GameWordBanner({required this.gameState});
   final GameState gameState;
 
+  Widget _buildTimerBadge(int timer, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.18),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color, width: 1.5),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.timer_outlined, color: color, size: 13),
+          const SizedBox(width: 4),
+          Text(
+            '${timer}s',
+            style: GoogleFonts.rubik(
+              color: color,
+              fontWeight: FontWeight.w900,
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final mode = gameState.specialMode;
     final isDrawing = gameState.amIDrawing;
+    final timer = ref.watch(timerProvider);
+    final timerColor = timer > 30
+        ? AppColors.timerGreen
+        : timer > 15
+            ? AppColors.timerYellow
+            : AppColors.timerRed;
 
     if (isDrawing) {
       if (gameState.isChoosingWord) {
@@ -427,19 +459,25 @@ class _GameWordBanner extends StatelessWidget {
             border: Border.all(color: AppColors.secondary, width: 1.5),
           ),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('🎨', style: TextStyle(fontSize: 16)),
-              const SizedBox(width: 8),
-              Text(
-                '¡TE TOCA DIBUJAR! ELIGE UNA PALABRA',
-                style: GoogleFonts.rubik(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w900,
-                  fontSize: 12,
-                  letterSpacing: 0.5,
-                ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('🎨', style: TextStyle(fontSize: 16)),
+                  const SizedBox(width: 8),
+                  Text(
+                    '¡TE TOCA DIBUJAR! ELIGE UNA PALABRA',
+                    style: GoogleFonts.rubik(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 12,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ],
               ),
+              _buildTimerBadge(timer, timerColor),
             ],
           ),
         );
@@ -532,7 +570,7 @@ class _GameWordBanner extends StatelessWidget {
                 ),
               ),
             ),
-            if (mode != null)
+            if (mode != null) ...[
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
@@ -549,11 +587,14 @@ class _GameWordBanner extends StatelessWidget {
                   ),
                 ),
               ),
+              const SizedBox(width: 6),
+            ],
+            _buildTimerBadge(timer, timerColor),
           ],
         ),
       );
     } else {
-      // Guesser view: shows drawer nickname and word hint
+      // Guesser view: shows drawer nickname, word hint and countdown timer
       final hint = gameState.wordHint ?? '';
       final drawer = gameState.currentDrawerNickname;
 
@@ -603,7 +644,7 @@ class _GameWordBanner extends StatelessWidget {
                 ),
               ),
             ),
-            if (mode != null)
+            if (mode != null) ...[
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
@@ -619,6 +660,9 @@ class _GameWordBanner extends StatelessWidget {
                   ),
                 ),
               ),
+              const SizedBox(width: 6),
+            ],
+            _buildTimerBadge(timer, timerColor),
           ],
         ),
       );
@@ -2629,7 +2673,7 @@ class _SpecialModeBannerOverlayState extends State<_SpecialModeBannerOverlay>
     if (_dismissed) return const SizedBox.shrink();
 
     return Positioned(
-      top: 16,
+      top: 56,
       left: 16,
       right: 16,
       child: Center(
