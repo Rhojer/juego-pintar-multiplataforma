@@ -26,3 +26,10 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Markdown / AI Instructions & Docs
+*.md
+**/*.md
+
+# Scratch / Temp test scripts
+scratch/
